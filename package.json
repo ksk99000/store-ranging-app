@@ -1,0 +1,13 @@
+{
+  "name": "ranging-app-builder",
+  "version": "2.0.0",
+  "description": "Build script to fetch data for the ranging app using Google Sheets API.",
+  "main": "build.js",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "googleapis": "^105.0.0"
+  }
+}
+

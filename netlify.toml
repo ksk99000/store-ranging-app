@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build && cp index.html dist/"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "14"
+
