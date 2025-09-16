@@ -25,6 +25,7 @@
     .buttons { margin-top: 10px; }
     button { padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
     .add { background: #007bff; color: white; }
+    .add.added { background: #28a745; } /* green when added */
     .not { background: #dc3545; color: white; }
     .offer-summary {
       background: #e6f7ff;
@@ -104,10 +105,11 @@
       }
 
       products.forEach(p => {
+        const dealValue = parseFloat(p['50% Deal']) || 0;
+        const isSelected = selectedDeals.some(d => d.product === p.Product);
+
         const card = document.createElement("div");
         card.className = "product-card";
-
-        const dealValue = parseFloat(p['50% Deal']) || 0;
 
         card.innerHTML = `
           <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
@@ -122,7 +124,9 @@
             <p>50% Deal: ${dealValue ? '$' + dealValue.toFixed(2) : '-'}</p>
           </div>
           <div class="buttons">
-            <button class="add" onclick="addToOffer('${p.Product}','${dealValue}')">Add to Offer</button>
+            <button class="add ${isSelected ? 'added' : ''}" onclick="toggleOffer(this,'${p.Product}','${dealValue}')">
+              ${isSelected ? 'Added' : 'Add to Offer'}
+            </button>
             <button class="not" onclick="removeFromOffer('${p.Product}')">Not Buying</button>
           </div>
         `;
@@ -130,9 +134,18 @@
       });
     }
 
-    function addToOffer(product, dealValue) {
-      if (!selectedDeals.some(d => d.product === product)) {
+    function toggleOffer(btn, product, dealValue) {
+      const existing = selectedDeals.find(d => d.product === product);
+      if (existing) {
+        // remove
+        selectedDeals = selectedDeals.filter(d => d.product !== product);
+        btn.classList.remove("added");
+        btn.textContent = "Add to Offer";
+      } else {
+        // add
         selectedDeals.push({ product, dealValue: parseFloat(dealValue) || 0 });
+        btn.classList.add("added");
+        btn.textContent = "Added";
       }
       updateOfferSummary();
     }
@@ -140,6 +153,7 @@
     function removeFromOffer(product) {
       selectedDeals = selectedDeals.filter(d => d.product !== product);
       updateOfferSummary();
+      renderProducts(); // refresh buttons
     }
 
     function updateOfferSummary() {
