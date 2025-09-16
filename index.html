@@ -11,6 +11,8 @@
     .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .view-toggle-btn.active { background-color: #3b82f6; color: white; }
+    .hidden { display: none; }
+    .bg-white-shadow { background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 1rem; border-radius: 0.5rem; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -32,7 +34,7 @@
             <div class="loader mx-auto"></div>
             <p class="mt-2 text-slate-500">Loading data...</p>
           </div>
-          <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden"></div>
         </div>
 
         <!-- Store View -->
@@ -51,14 +53,12 @@
   </div>
 
   <script>
-    // 🔗 Replace with your actual Sheets.best API URL
-    const dataUrl = "https://sheets.best/api/sheets/YOUR-SHEET-ID";
+    const dataUrl = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241";
 
     let rangingData = [];
 
     document.addEventListener("DOMContentLoaded", () => {
       loadData();
-
       document.getElementById("refresh-btn").addEventListener("click", loadData);
       document.getElementById("dashboard-btn").addEventListener("click", () => {
         document.getElementById("dashboard-view").classList.remove("hidden");
@@ -68,15 +68,24 @@
 
     async function loadData() {
       try {
+        // show loader
         document.getElementById("dashboard-loader").style.display = "block";
+        document.getElementById("dashboard-grid").classList.add("hidden");
+
         const res = await fetch(dataUrl);
+        if (!res.ok) {
+          throw new Error("HTTP error " + res.status);
+        }
         const data = await res.json();
         rangingData = data;
+
         renderDashboard(data);
       } catch (err) {
         console.error("Failed to load data", err);
-        document.getElementById("dashboard-grid").innerHTML = "<p>⚠️ Error loading data</p>";
+        document.getElementById("dashboard-grid").innerHTML = "<p class='text-red-500'>⚠️ Error loading data</p>";
+        document.getElementById("dashboard-grid").classList.remove("hidden");
       } finally {
+        // hide loader
         document.getElementById("dashboard-loader").style.display = "none";
       }
     }
@@ -84,23 +93,24 @@
     function renderDashboard(data) {
       const totalStores = new Set(data.map(r => r.Store)).size;
       const totalProducts = data.length;
-      const notRangingCount = data.filter(r => r.Ranging.toLowerCase() === "not ranging").length;
+      const notRangingCount = data.filter(r => (r.Ranging || "").toLowerCase() === "not ranging").length;
 
       const grid = document.getElementById("dashboard-grid");
       grid.innerHTML = `
-        <div class="p-4 bg-white shadow rounded">
+        <div class="bg-white-shadow">
           <h3 class="font-bold text-lg">Total Stores</h3>
           <p class="text-2xl">${totalStores}</p>
         </div>
-        <div class="p-4 bg-white shadow rounded">
+        <div class="bg-white-shadow">
           <h3 class="font-bold text-lg">Total Products</h3>
           <p class="text-2xl">${totalProducts}</p>
         </div>
-        <div class="p-4 bg-white shadow rounded">
+        <div class="bg-white-shadow">
           <h3 class="font-bold text-lg">Not Ranging</h3>
           <p class="text-2xl text-red-600">${notRangingCount}</p>
         </div>
       `;
+      grid.classList.remove("hidden");
     }
   </script>
 </body>
