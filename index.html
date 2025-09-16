@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App</title>
+  <title>Store Ranging App (with Debug)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
@@ -14,6 +14,16 @@
     }
     .product-info { flex: 1; margin-left: 10px; }
     .actions button { margin-left: 5px; }
+    #debug {
+      margin-top: 30px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background: #f4f4f4;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -26,6 +36,9 @@
   </select>
   <div id="products"></div>
 
+  <h2>Debug Output</h2>
+  <div id="debug">Raw JSON will appear here</div>
+
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec";
     let allData = [];
@@ -34,6 +47,9 @@
       try {
         const res = await fetch(API_URL);
         allData = await res.json();
+
+        // Show raw JSON in debug panel
+        document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
 
         // Get unique store names
         const stores = [...new Set(allData.map(row => row.Store || row.store))];
@@ -61,7 +77,6 @@
 
       if (!store) return;
 
-      // Filter products for this store with Status = "Not Ranging"
       const products = allData.filter(row =>
         (row.Store || row.store) === store &&
         (row.Status || row.status) === "Not Ranging"
@@ -116,7 +131,7 @@
       }
     }
 
-    // Load data at start
+    // Initial load
     fetchData();
   </script>
 </body>
