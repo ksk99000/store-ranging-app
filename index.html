@@ -2,131 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { font-size: 22px; }
-    select, button { padding: 6px; margin: 5px 0; }
-    .summary { background: #f4faff; padding: 10px; border: 1px solid #ccc; margin-bottom: 15px; }
-    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor: pointer; }
-    .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 10px; }
-    .details { display: none; flex-direction: column; }
+    h1 { font-size: 20px; }
+    select, button { padding: 5px; margin: 5px 0; }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .card img {
+      width: 60px; height: 60px;
+      margin-right: 10px;
+      background: #eee;
+    }
+    .details { flex-grow: 1; }
     .buttons { margin-top: 10px; }
-    .add, .not { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
-    .add { background: #007bff; color: white; }
-    .add.added { background: #28a745; }
-    .not { background: #dc3545; color: white; margin-left: 5px; }
+    .add { background: blue; color: white; padding: 5px 10px; border: none; border-radius: 4px; }
+    .add.added { background: green; }
+    .not { background: red; color: white; padding: 5px 10px; border: none; border-radius: 4px; }
+    .hidden { display: none; }
+    #summary { background: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 6px; }
+    #debug { white-space: pre-wrap; font-size: 12px; background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
-  <br>
-  <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="renderProducts()"></select>
-
-  <div class="summary">
-    <h3>Total Deal Offer Summary</h3>
-    <p id="total">$0.00</p>
+  <div>
+    <label for="storeSelect">Select a store:</label>
+    <select id="storeSelect" onchange="renderProducts()">
+      <option value="">-- Choose a store --</option>
+    </select>
   </div>
-
+  <div id="summary"><b>Total Deal Offer Summary</b><br>$<span id="total">0.00</span></div>
   <h2>Products</h2>
-  <div id="productContainer"></div>
+  <div id="products"></div>
+  <h3>Raw JSON Debug Output</h3>
+  <div id="debug">Debug will appear here</div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbxwpjfu80sA2RRw1TdV0FW27RBQsfpucO1d0hgx1nvMxOk7ep5V7tuvnvyBScFjjoZUDw/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxq52zb8fyUOcYjE4yDXcrKgSYeKn6b78nR0rCPtErII7IvmaGEHV0zvxB4LnR_huABUw/exec";
     let allData = [];
     let selectedStore = "";
-    let addedDeals = {};
+    let total = 0;
 
     async function loadData() {
       try {
+        document.getElementById("debug").textContent = "Loading...";
         const res = await fetch(scriptUrl);
-        allData = await res.json();
+        const json = await res.json();
+        allData = json.filter(item => item.Status === "Not Ranging"); // only not ranging
+        document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
 
-        const stores = [...new Set(allData.map(r => r.Store))].sort();
+        // populate stores
+        const stores = [...new Set(allData.map(r => r.Store))];
         const select = document.getElementById("storeSelect");
-        select.innerHTML = '<option value="">-- Choose a store --</option>' +
-          stores.map(s => `<option value="${s}">${s}</option>`).join("");
+        select.innerHTML = '<option value="">-- Choose a store --</option>';
+        stores.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s; opt.textContent = s;
+          select.appendChild(opt);
+        });
 
-        document.getElementById("productContainer").innerHTML = "";
-        document.getElementById("total").textContent = "$0.00";
-        addedDeals = {};
       } catch (err) {
-        document.getElementById("productContainer").innerHTML = "<p>Error loading data.</p>";
+        document.getElementById("debug").textContent = "Error loading: " + err;
       }
     }
 
     function renderProducts() {
       selectedStore = document.getElementById("storeSelect").value;
-      const container = document.getElementById("productContainer");
+      const container = document.getElementById("products");
       container.innerHTML = "";
-
-      if (!selectedStore) return;
-
-      const products = allData.filter(r => r.Store === selectedStore && r.Status === "Not Ranging");
-
-      if (products.length === 0) {
-        container.innerHTML = "<p>No products found.</p>";
+      const data = allData.filter(r => r.Store === selectedStore);
+      if (!data.length) {
+        container.textContent = "No products found.";
         return;
       }
-
-      products.forEach(p => {
+      data.forEach(p => {
         const card = document.createElement("div");
         card.className = "card";
         card.innerHTML = `
-          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
-          <div>
-            <strong>${p.Product}</strong>
-            <div class="details">
-              <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
-              <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
-              <p>Category: ${p['Category'] || '-'}</p>
-              <p>Layout: ${p['Metcash Layout'] || '-'}</p>
-              <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
-              <p>List Price: ${p['List Price'] || '-'}</p>
-              <p>50% Deal: ${p['50% Deal'] || '-'}</p>
-              <div class="buttons">
-                <button class="add" onclick="toggleOffer(event, '${p.Product}', ${p['50% Deal'] || 0})">Add to Offer</button>
-                <button class="not" onclick="removeProduct(event, this)">Not Buying</button>
-              </div>
+          <img src="${p['Image URL'] || ''}" alt="Product">
+          <div class="details hidden">
+            <b>${p['Product']}</b><br>
+            Metcash Code: ${p['Metcash Code'] || '-'}<br>
+            SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
+            Category: ${p['Category'] || '-'}<br>
+            Layout: ${p['Metcash Layout'] || '-'}<br>
+            Base Range: ${p['Metcash Base Range'] || '-'}<br>
+            List Price: ${p['List Price'] || '-'}<br>
+            50% Deal: ${p['50% Deal'] || '-'}<br>
+            Status: ${p['Status'] || '-'}
+            <div class="buttons">
+              <button class="add" onclick="toggleOffer(this, '${p['Product']}', '${p['List Price']}')">Add to Offer</button>
+              <button class="not" onclick="removeProduct(this, '${p['Product']}')">Not Buying</button>
             </div>
           </div>
         `;
-        card.addEventListener("click", (e) => {
+        card.onclick = function(e) {
           if (!e.target.classList.contains("add") && !e.target.classList.contains("not")) {
-            const details = card.querySelector(".details");
-            details.style.display = details.style.display === "flex" ? "none" : "flex";
+            card.querySelector(".details").classList.toggle("hidden");
           }
-        });
+        };
         container.appendChild(card);
       });
     }
 
-    function toggleOffer(e, product, dealValue) {
-      e.stopPropagation();
-      const btn = e.target;
+    function toggleOffer(btn, product, price) {
+      let val = parseFloat(price.replace(/[^0-9.]/g, "")) || 0;
       if (btn.classList.contains("added")) {
-        delete addedDeals[product];
         btn.classList.remove("added");
         btn.textContent = "Add to Offer";
+        total -= val;
       } else {
-        addedDeals[product] = parseFloat(dealValue) || 0;
         btn.classList.add("added");
         btn.textContent = "Added";
+        total += val;
       }
-      updateTotal();
+      document.getElementById("total").textContent = total.toFixed(2);
     }
 
-    function updateTotal() {
-      const total = Object.values(addedDeals).reduce((a, b) => a + b, 0);
-      document.getElementById("total").textContent = "$" + total.toFixed(2);
-    }
-
-    function removeProduct(e, btn) {
-      e.stopPropagation();
-      const card = btn.closest(".card");
-      card.remove();
+    function removeProduct(btn, product) {
+      btn.closest(".card").remove();
+      // optionally send update back to script (POST)
     }
 
     loadData();
