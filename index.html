@@ -9,13 +9,14 @@
     h1 { font-size: 24px; }
     select, button { padding: 8px; margin: 5px 0; }
     .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; }
-    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; cursor: pointer; }
+    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor: pointer; }
     .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
-    .details { display: none; flex-direction: column; flex: 1; }
-    .buttons { margin-top: 10px; }
+    .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
+    .buttons { margin-left: auto; }
     .add { background: blue; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
     .add.added { background: green; }
     .not { background: red; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+    .details { display: none; flex-direction: column; margin-top: 10px; }
     #products { margin-top: 20px; }
     #offerList { margin-top: 10px; padding-left: 20px; }
     #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
@@ -111,19 +112,11 @@
         img.src = p["Image URL"] || "";
         img.alt = p.Product || "Product";
 
-        const detailsDiv = document.createElement("div");
-        detailsDiv.className = "details";
-        detailsDiv.innerHTML = `
-          <b>${p['Product'] || '-'}</b><br>
-          Metcash Code: ${p['Metcash Code'] || '-'}<br>
-          SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
-          Category: ${p['Category'] || '-'}<br>
-          Layout: ${p['Metcash Layout'] || '-'}<br>
-          Base Range: ${p['Metcash Base Range'] || '-'}<br>
-          List Price: ${p['List Price'] || '-'}<br>
-          50% Deal: ${p['50% Deal'] || '-'}<br>
-          Status: ${p['Status'] || '-'}
-        `;
+        const mainLine = document.createElement("div");
+        mainLine.className = "main-line";
+
+        const nameEl = document.createElement("strong");
+        nameEl.textContent = p.Product || "-";
 
         const btnDiv = document.createElement("div");
         btnDiv.className = "buttons";
@@ -146,12 +139,29 @@
 
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
-        detailsDiv.appendChild(btnDiv);
 
-        card.appendChild(img);
+        mainLine.appendChild(nameEl);
+        mainLine.appendChild(btnDiv);
+
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "details";
+        detailsDiv.innerHTML = `
+          Metcash Code: ${p['Metcash Code'] || '-'}<br>
+          SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
+          Category: ${p['Category'] || '-'}<br>
+          Layout: ${p['Metcash Layout'] || '-'}<br>
+          Base Range: ${p['Metcash Base Range'] || '-'}<br>
+          List Price: ${p['List Price'] || '-'}<br>
+          50% Deal: ${p['50% Deal'] || '-'}<br>
+          Status: ${p['Status'] || '-'}
+        `;
+
         const rightDiv = document.createElement("div");
         rightDiv.style.flex = "1";
+        rightDiv.appendChild(mainLine);
         rightDiv.appendChild(detailsDiv);
+
+        card.appendChild(img);
         card.appendChild(rightDiv);
 
         card.onclick = function(e) {
@@ -195,7 +205,7 @@
 
     function removeProduct(cardElem, productObj) {
       cardElem.remove();
-      // Optional: send update back to script
+      // Optionally: send update back to script
     }
 
     loadData();
