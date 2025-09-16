@@ -8,7 +8,13 @@
     body { font-family: Arial, sans-serif; padding: 20px; }
     h1 { font-size: 24px; }
     select, button { padding: 8px; margin: 5px 0; }
-    .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; }
+    .summary { 
+      background: #eef; 
+      padding: 10px; 
+      border: 1px solid #ccd; 
+      margin-bottom: 15px; 
+      display: none; /* hidden by default */
+    }
     .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor: pointer; }
     .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
     .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
@@ -34,7 +40,7 @@
     </select>
   </div>
 
-  <div class="summary">
+  <div id="summary" class="summary">
     <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
     <ul id="offerList"></ul>
   </div>
@@ -49,7 +55,7 @@
   <script>
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
     let allData = [];
-    let selectedDeals = {}; // { productName: value }
+    let selectedDeals = {};
 
     async function loadData() {
       try {
@@ -88,11 +94,15 @@
     function renderProducts() {
       const storeName = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
+      const summaryBox = document.getElementById("summary");
+
       container.innerHTML = "";
 
       if (!storeName) {
-        container.textContent = "Please select a store.";
+        summaryBox.style.display = "none"; // hide when no store selected
         return;
+      } else {
+        summaryBox.style.display = "block"; // show when store is chosen
       }
 
       const filtered = allData.filter(item => 
@@ -205,7 +215,6 @@
 
     function removeProduct(cardElem, productObj) {
       cardElem.remove();
-      // Optionally: send update back to script
     }
 
     loadData();
