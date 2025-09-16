@@ -23,6 +23,7 @@
       display: flex;
       gap: 10px;
       padding: 10px;
+      flex-wrap: wrap;
     }
     button {
       border: none;
@@ -40,6 +41,7 @@
       margin: 10px;
       padding: 10px;
       border-radius: 6px;
+      display: none; /* only show after store is selected */
     }
     .product-card {
       display: flex;
@@ -74,6 +76,10 @@
   <header>📱 Store Ranging App</header>
   <div class="controls">
     <button class="refresh" onclick="loadData()">Refresh</button>
+    <label for="storeSelect">Select a store:</label>
+    <select id="storeSelect" onchange="renderProducts()">
+      <option value="">-- Choose a store --</option>
+    </select>
   </div>
 
   <div class="summary" id="dealSummary">
@@ -90,6 +96,7 @@
 
   <script>
     const scriptUrl = "YOUR_SCRIPT_URL_HERE"; // replace with your Google Apps Script URL
+    let allData = [];
     let productsData = [];
     let selectedOffers = {};
 
@@ -97,17 +104,41 @@
       try {
         const res = await fetch(scriptUrl);
         const data = await res.json();
-        productsData = data;
-        renderProducts();
+        allData = data;
+        populateStores();
         document.getElementById("debug").textContent =
-          "Loaded " + data.length + " products.";
+          "Loaded " + data.length + " rows.";
       } catch (err) {
         document.getElementById("debug").textContent =
           "Error loading: " + err;
       }
     }
 
+    function populateStores() {
+      const storeSelect = document.getElementById("storeSelect");
+      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+      const stores = [...new Set(allData.map(r => r.Store))];
+      stores.forEach(store => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        storeSelect.appendChild(opt);
+      });
+    }
+
     function renderProducts() {
+      const store = document.getElementById("storeSelect").value;
+      const summary = document.getElementById("dealSummary");
+      if (!store) {
+        productsData = [];
+        document.getElementById("products").innerHTML = "";
+        summary.style.display = "none";
+        return;
+      }
+      summary.style.display = "block";
+      productsData = allData.filter(
+        r => r.Store === store && r.Status === "not ranging"
+      );
       const container = document.getElementById("products");
       container.innerHTML = "";
       productsData.forEach(p => {
@@ -117,6 +148,9 @@
           <img src="${p['Image URL'] || ''}" alt="Product">
           <div class="product-info">
             <strong>${p['Product'] || 'Unnamed'}</strong>
+            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+            <p>Category: ${p['Category'] || '-'}</p>
+            <p>List Price: ${p['List Price'] || '-'}</p>
             <p>50% Deal: ${p['50% Deal'] || '-'}</p>
           </div>
           <button class="offer ${selectedOffers[p['Product']] ? 'added' : ''}"
