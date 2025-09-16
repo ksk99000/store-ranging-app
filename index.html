@@ -26,7 +26,7 @@
     button:hover { background: #0063cc; }
     select { background: white; border: 1px solid #ccc; }
 
-    /* Cards */
+    /* Base card */
     .card {
       border-radius: 16px;
       margin: 10px 0;
@@ -34,7 +34,6 @@
       display: flex;
       align-items: center;
       backdrop-filter: blur(20px);
-      background: rgba(255,255,255,0.9);
       box-shadow: 0 4px 8px rgba(0,0,0,0.06);
       cursor: pointer;
       transition: transform 0.2s, box-shadow 0.2s;
@@ -49,6 +48,11 @@
       border-radius: 12px;
       background: #f2f2f7;
     }
+
+    /* Color-coded cards */
+    .card.not-ranging { background: #ffecec; }  /* light red */
+    .card.not-buying  { background: #fff4e5; }  /* light orange */
+    .card.ranging     { background: #ecffec; }  /* light green */
 
     /* Buttons inside cards */
     .add { background: #007aff; }
@@ -141,7 +145,6 @@
   <button onclick="loadData()">🔄 Refresh</button>
   <button id="viewToggleSwitch" onclick="toggleView()">📊 Switch to Store View</button>
 
-  <!-- Store controls -->
   <div id="storeControls" style="display:none;">
     <label for="storeSelect">Select a store:</label>
     <select id="storeSelect" onchange="renderProducts()">
@@ -161,13 +164,11 @@
 
   <div id="products"></div>
 
-  <!-- Dashboard -->
   <div id="dashboard" style="display:none; margin-top:20px;">
     <h2 style="color:#007aff;">📊 Product Dashboard</h2>
     <div id="dashboardContent"></div>
   </div>
 
-  <!-- Modal -->
   <div id="storeModal">
     <div id="storeModalContent">
       <h3 id="modalTitle" style="color:#007aff;">Stores Not Ranging</h3>
@@ -249,8 +250,9 @@
       }
 
       filtered.forEach(p => {
+        const statusVal = String(p.Status).trim().toLowerCase();
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "card " + (statusVal === "not ranging" ? "not-ranging" : statusVal === "not buying" ? "not-buying" : "ranging");
 
         const img = document.createElement("img");
         img.src = p["Image URL"] || "";
