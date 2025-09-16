@@ -1,65 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Store Ranging App</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; }
+    .active-store { background-color: #2563eb; color: white; }
+    .deal-button.selected { background-color: #16a34a; color: white; font-weight: bold; }
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
+
   <div class="h-screen flex flex-col">
-    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-      <h1 class="text-lg font-bold">Store Ranging App</h1>
-      <button id="btn-refresh" class="px-3 py-1 bg-green-600 text-white rounded">Refresh 🔄</button>
+    <header class="p-4 border-b border-slate-200 bg-white flex justify-between items-center">
+      <h1 class="text-xl font-bold">Store Ranging App</h1>
+      <button id="refresh-btn" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+        Refresh 🔄
+      </button>
     </header>
 
-    <main class="flex-1 overflow-y-auto p-4">
+    <!-- Deal Summary -->
+    <div id="deal-summary" class="hidden p-4 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm"></div>
+
+    <main class="flex-1 p-4 overflow-y-auto">
       <div class="mb-4">
         <label for="store-select" class="block text-sm font-medium text-slate-700 mb-1">Select a store</label>
         <select id="store-select" class="w-full p-2 border rounded bg-white"></select>
       </div>
 
-      <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      <div id="product-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </main>
   </div>
 
   <script>
-    const DATA_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Data";
-    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging";
-    const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
+    const webAppUrl = 'https://script.google.com/macros/s/AKfycbxrP1ADOum-wxuaM4AwBzbGHKbG_3KJOLJNfeCcixt_3AjrXgfIJ7Ncp8uekeidG8I9_g/exec';
 
-    let stores = [];
-    let ranging = [];
-    let deals = [];
+    let rangingData = [];
+    let dealsData = [];
+    let selectedDeals = [];
 
-    document.getElementById("btn-refresh").addEventListener("click", loadData);
+    document.getElementById("refresh-btn").addEventListener("click", loadData);
     document.getElementById("store-select").addEventListener("change", e => showStoreProducts(e.target.value));
 
     async function loadData() {
       try {
-        const [dataRes, rangingRes, dealsRes] = await Promise.all([
-          fetch(DATA_URL),
-          fetch(RANGING_URL),
-          fetch(DEALS_URL)
-        ]);
+        const res = await fetch(webAppUrl);
+        const data = await res.json();
 
-        const dataTab = await dataRes.json();
-        ranging = await rangingRes.json();
-        deals = await dealsRes.json();
-
-        // Stores are in first row of Data tab (keys of object)
-        const firstRow = dataTab[0] || {};
-        stores = Object.values(firstRow).filter(v => v && v !== "Store ID");
+        rangingData = data.rangingData || [];
+        dealsData = data.dealsData || [];
 
         renderStoreDropdown();
-      } catch (e) {
-        alert("Error loading data: " + e.message);
+      } catch (err) {
+        alert("⚠️ Failed to load data: " + err.message);
       }
     }
 
     function renderStoreDropdown() {
       const select = document.getElementById("store-select");
       select.innerHTML = "<option value=''>-- Choose a store --</option>";
+
+      const stores = [...new Set(rangingData.map(r => r[0]).filter(Boolean))].sort();
       stores.forEach(store => {
         const opt = document.createElement("option");
         opt.value = store;
@@ -69,29 +74,71 @@
     }
 
     function showStoreProducts(store) {
-      const grid = document.getElementById("products-grid");
+      const grid = document.getElementById("product-grid");
       grid.innerHTML = "";
       if (!store) return;
 
-      ranging.forEach(row => {
-        const status = row[store];
-        if (status && status.toLowerCase().includes("not")) {
-          const productMeta = deals.find(d => d["Product"] === row["Product"]);
-          if (!productMeta) return;
+      const storeRows = rangingData.filter(r => r[0] === store && r[2] === "Not Ranging");
 
-          const card = document.createElement("div");
-          card.className = "bg-white rounded shadow p-3 flex flex-col";
-          card.innerHTML = `
-            <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
-              <img src="${productMeta["Image URL"]}" alt="${row["Product"]}" class="w-full h-full object-cover"
-                   onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
-            </div>
-            <div class="font-semibold mb-1">${row["Product"]}</div>
-            <span class="text-xs text-slate-600">${productMeta["Category"] || ""}</span>
-          `;
-          grid.appendChild(card);
-        }
+      storeRows.forEach(row => {
+        const productName = row[1];
+        const productMeta = dealsData.find(d => d.product === productName);
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded shadow p-3 flex flex-col";
+
+        card.innerHTML = `
+          <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
+            <img src="${productMeta?.imageurl || 'https://placehold.co/400x300?text=No+Image'}" 
+                 alt="${productName}" class="w-full h-full object-cover">
+          </div>
+          <div class="font-semibold mb-1">${productName}</div>
+          <span class="text-xs text-slate-600">${productMeta?.category || ""}</span>
+          <button class="mt-2 px-3 py-1 rounded text-white text-sm ${isSelected(store, productName) ? 'bg-green-600' : 'bg-blue-600'}">
+            ${isSelected(store, productName) ? 'Added' : 'Add to Deal'}
+          </button>
+        `;
+
+        const btn = card.querySelector("button");
+        btn.addEventListener("click", () => toggleDeal(store, productName, productMeta, btn));
+        grid.appendChild(card);
       });
+
+      renderDealSummary();
+    }
+
+    function isSelected(store, product) {
+      return selectedDeals.some(d => d.store === store && d.product === product);
+    }
+
+    function toggleDeal(store, product, meta, btn) {
+      const idx = selectedDeals.findIndex(d => d.store === store && d.product === product);
+      if (idx >= 0) {
+        selectedDeals.splice(idx, 1);
+        btn.textContent = "Add to Deal";
+        btn.className = "mt-2 px-3 py-1 rounded bg-blue-600 text-white text-sm";
+      } else {
+        selectedDeals.push({ store, product, meta });
+        btn.textContent = "Added";
+        btn.className = "mt-2 px-3 py-1 rounded bg-green-600 text-white text-sm";
+      }
+      renderDealSummary();
+    }
+
+    function renderDealSummary() {
+      const box = document.getElementById("deal-summary");
+      if (selectedDeals.length === 0) {
+        box.classList.add("hidden");
+        return;
+      }
+
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <strong>${selectedDeals.length} product${selectedDeals.length > 1 ? "s" : ""} in deal:</strong>
+        <ul class="list-disc list-inside mt-1">
+          ${selectedDeals.map(d => `<li>${d.product} (${d.meta?.category || ""})</li>`).join("")}
+        </ul>
+      `;
     }
 
     loadData();
