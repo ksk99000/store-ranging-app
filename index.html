@@ -2,127 +2,134 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📱 Store Ranging App</title>
+  <title>Store Ranging App</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f8fbff; margin: 0; padding: 0; }
-    header { background: #007aff; color: white; padding: 15px; text-align: center; font-size: 1.4em; font-weight: bold; }
-    button { background: #007aff; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; margin: 4px; font-size: 0.9em; }
-    .add { background: #28a745; } .add.added { background: #1c7c31; }
-    .not { background: #dc3545; }
-    select { padding: 6px; border-radius: 5px; border: 1px solid #ccc; margin: 8px 0; }
-    .card { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 10px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
-    .card img { width: 70px; height: 70px; object-fit: contain; border-radius: 6px; margin-right: 12px; }
-    .info { flex: 1; }
-    .buttons { display: flex; gap: 8px; margin-top: 6px; }
-    #debug { font-family: monospace; background: #fff3cd; border: 1px solid #ffeeba; padding: 8px; margin-top: 10px; border-radius: 8px; white-space: pre-wrap; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 10px;
+      color: #0056d6;
+    }
+    select, button {
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .product-card {
+      display: flex;
+      align-items: center;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .product-card img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-right: 15px;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    .product-info {
+      flex: 1;
+    }
+    .debug {
+      background: #fff5e1;
+      padding: 10px;
+      margin-top: 15px;
+      border: 1px solid #f0d48c;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
-  <header>📱 Store Ranging App</header>
+  <h1>📱 Store Ranging App</h1>
 
-  <div style="padding:15px;">
-    <button onclick="loadData()">🔄 Refresh</button><br><br>
-    <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" onchange="filterByStore()">
-      <option value="">-- Choose a store --</option>
-    </select>
+  <button onclick="loadData()">🔄 Refresh</button>
+  <br>
+  <label>Select a store:</label>
+  <select id="storeSelect" onchange="filterByStore()">
+    <option value="">-- Choose a store --</option>
+  </select>
 
-    <h3>Total Deal Offer Summary: $<span id="total">0.00</span></h3>
+  <h2>Products</h2>
+  <div id="products"></div>
 
-    <h3>Products</h3>
-    <div id="products"></div>
-
-    <h3>🛠 Debug Output</h3>
-    <div id="debug">Waiting for data...</div>
-  </div>
+  <h3>🛠 Debug Output</h3>
+  <div id="debug" class="debug"></div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbyuYCaMVexXexoUinDwIZsMrAUZlnSqpPcsp4Ytk_L443OyPl60tpMdryK5u0ztFq5riQ/exec";
-    let allData = [];
-    let totalDeal = 0;
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbx22kAm7uHFPV2i9B63H_P9vsxzaNVs9N5Sful2G-iRh2egOuZxQPDdEsWGXINj0iqdtQ/exec";
+    let allData = { deals: [], ranging: [] };
 
     async function loadData() {
       document.getElementById("debug").textContent = "Loading...";
       try {
         const res = await fetch(scriptUrl);
         const data = await res.json();
+        allData = data;
 
-        // 🔹 Defensive check: force into array
-        if (Array.isArray(data)) {
-          allData = data;
-        } else if (data && Array.isArray(data.products)) {
-          allData = data.products;
-        } else {
-          throw new Error("Unexpected response: " + JSON.stringify(data));
-        }
+        // ✅ Debug info
+        document.getElementById("debug").textContent = JSON.stringify(data, null, 2);
 
-        document.getElementById("debug").textContent = "Loaded " + allData.length + " rows";
-        populateStores();
+        // Build store list
+        const stores = [...new Set(allData.ranging.map(r => r.Store))].filter(s => s);
+        const select = document.getElementById("storeSelect");
+        select.innerHTML = '<option value="">-- Choose a store --</option>';
+        stores.forEach(store => {
+          const opt = document.createElement("option");
+          opt.value = store;
+          opt.textContent = store;
+          select.appendChild(opt);
+        });
+
       } catch (err) {
         document.getElementById("debug").textContent = "Error loading: " + err;
       }
-    }
-
-    function populateStores() {
-      const storeSelect = document.getElementById("storeSelect");
-      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(allData.map(p => p.Store))].sort();
-      stores.forEach(store => {
-        const opt = document.createElement("option");
-        opt.value = store;
-        opt.textContent = store;
-        storeSelect.appendChild(opt);
-      });
     }
 
     function filterByStore() {
       const store = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
       container.innerHTML = "";
-      totalDeal = 0;
-      document.getElementById("total").textContent = totalDeal.toFixed(2);
 
       if (!store) return;
-      const products = allData.filter(p => p.Store === store);
 
-      products.forEach(p => {
+      // Filter ranging data for this store
+      const storeRows = allData.ranging.filter(r => r.Store === store);
+
+      storeRows.forEach(row => {
+        const product = allData.deals.find(d => d.Product === row.Product);
+
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "product-card";
         card.innerHTML = `
-          <img src="${p['Image URL'] || ''}" alt="Product">
-          <div class="info">
-            <strong>${p.Product || "Unnamed Product"}</strong>
-            <div>Metcash Code: ${p['Metcash Code'] || '-'}</div>
-            <div>SDA Ranking: ${p['SDA Ranking'] || '-'}</div>
-            <div>Category: ${p['Category'] || '-'}</div>
-            <div>Price: $${p['List Price'] || '0.00'}</div>
-            <div class="buttons">
-              <button class="add" onclick="toggleDeal(this, ${parseFloat(p['50% Deal'] || 0)})">Add to Offer</button>
-              <button class="not" onclick="removeProduct(this)">Not Buying</button>
-            </div>
+          <img src="${product?.['Image URL'] || ''}" alt="Product">
+          <div class="product-info">
+            <strong>${row.Product}</strong><br>
+            Status: ${row.Status || 'N/A'}<br>
+            Metcash Code: ${product?.['Metcash Code'] || '-'}<br>
+            SDA Ranking: ${product?.['SDA Ranking'] || '-'}
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function toggleDeal(btn, value) {
-      if (btn.classList.contains("added")) {
-        totalDeal -= value;
-        btn.classList.remove("added");
-        btn.textContent = "Add to Offer";
-      } else {
-        totalDeal += value;
-        btn.classList.add("added");
-        btn.textContent = "Added";
-      }
-      document.getElementById("total").textContent = totalDeal.toFixed(2);
-    }
-
-    function removeProduct(btn) {
-      btn.closest(".card").remove();
-    }
-
+    // Load on start
     loadData();
   </script>
 </body>
