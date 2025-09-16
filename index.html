@@ -7,8 +7,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, sans-serif; }
-    .loader { border: 4px solid #eee; border-top: 4px solid #2563eb; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg) } }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -33,7 +31,12 @@
 
   <script>
     const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
-    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RangingData";
+    const RANGING_URLS = [
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RangingData",
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging Data",
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging",
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RANGING"
+    ];
 
     let deals = [];
     let merged = [];
@@ -47,23 +50,36 @@
         const dealsRes = await fetch(DEALS_URL);
         deals = await dealsRes.json();
 
-        // Load ranging
-        const res = await fetch(RANGING_URL);
-        const ranging = await res.json();
-
-        console.log("🔎 Raw RangingData:", ranging);
-
-        const debugBox = document.getElementById("debug");
-        if (!Array.isArray(ranging) || ranging.length === 0) {
-          debugBox.textContent = "⚠️ API returned 0 rows from RangingData.";
-          debugBox.classList.remove("hidden");
-          return;
+        // Try multiple Ranging tab names
+        let ranging = [];
+        let urlUsed = "";
+        for (let url of RANGING_URLS) {
+          try {
+            const res = await fetch(url);
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+              ranging = data;
+              urlUsed = url;
+              break;
+            }
+          } catch (e) {
+            console.warn("Failed URL:", url, e);
+          }
         }
 
-        debugBox.textContent = `✅ API returned ${ranging.length} rows. First row keys: ${Object.keys(ranging[0]).join(", ")}`;
-        debugBox.classList.remove("hidden");
+        const debugBox = document.getElementById("debug");
+        if (ranging.length === 0) {
+          debugBox.textContent = "⚠️ All tested tab names returned 0 rows.";
+          debugBox.classList.remove("hidden");
+          return;
+        } else {
+          debugBox.textContent = `✅ Loaded ${ranging.length} rows from: ${urlUsed}. First row keys: ${Object.keys(ranging[0]).join(", ")}`;
+          debugBox.classList.remove("hidden");
+        }
 
-        // Build store list
+        console.log("🔎 Ranging first row:", ranging[0]);
+
+        // Build store list (just to confirm stores show up)
         merged = [];
         ranging.forEach(row => {
           const store = row["Store"] || row["store"] || "";
