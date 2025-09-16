@@ -2,137 +2,240 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Store Ranging App</title>
+  <title>📱 Store Ranging App</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f9fbfd;
-      margin: 0; padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background-color: #f5f9fc;
+      margin: 0;
+      padding: 0;
+      color: #222;
     }
-    h1 { color: #007aff; }
-    select, button { margin: 5px 0; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
-    .card {
-      background: #fff;
+    header {
+      background: #007aff;
+      color: white;
       padding: 15px;
-      margin: 10px 0;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      font-size: 20px;
+      font-weight: bold;
       display: flex;
       align-items: center;
+      justify-content: center;
     }
-    .card img {
-      width: 80px; height: 80px;
-      object-fit: cover;
+    header span { margin-left: 8px; }
+    .controls {
+      margin: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
       border-radius: 8px;
-      margin-right: 15px;
-    }
-    .buttons { margin-top: 10px; }
-    .add { background: #007aff; color: white; }
-    .not { background: #ff3b30; color: white; margin-left: 5px; }
-    #debug {
-      margin-top: 20px;
-      padding: 10px;
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      border-radius: 6px;
+      cursor: pointer;
       font-size: 14px;
+      font-weight: bold;
+      color: white;
+    }
+    .refresh { background: #007aff; }
+    .dashboard { background: #34c759; }
+    select {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    .summary {
+      margin: 15px;
+      padding: 10px;
+      background: #eaf4ff;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    .products, .dashboard-view { margin: 15px; }
+    .product-card, .dash-card {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .product-card img, .dash-card img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #f0f0f0;
+    }
+    .product-info { flex: 1; }
+    .product-name { font-weight: bold; margin-bottom: 5px; }
+    .buttons { display: flex; gap: 8px; }
+    .add { background: #007aff; }
+    .add.added { background: #34c759; }
+    .not { background: #ff3b30; }
+    .bar {
+      height: 12px;
+      border-radius: 6px;
+      margin: 5px 0;
+    }
+    .bar.red { background: #ff3b30; }
+    .bar.orange { background: #ff9500; }
+    .bar.green { background: #34c759; }
+    .debug {
+      margin: 15px;
+      padding: 10px;
+      background: #fffbea;
+      border-left: 4px solid #ff9500;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h1>📱 Store Ranging App</h1>
-  <button onclick="loadData()">🔄 Refresh</button>
+  <header>📱 <span>Store Ranging App</span></header>
 
-  <div>
-    <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" onchange="filterByStore()">
-      <option value="">-- Choose a store --</option>
+  <div class="controls">
+    <button class="refresh" onclick="loadData()">🔄 Refresh</button>
+    <button class="dashboard" onclick="toggleView()">📊 Switch View</button>
+    <select id="storeSelect" onchange="renderProducts()">
+      <option>-- Choose a store --</option>
     </select>
   </div>
 
-  <h3>Products</h3>
-  <div id="products"></div>
+  <div id="dealSummary" class="summary" style="display:none;">
+    Total Deal Offer Summary<br><span id="dealTotal">$0.00</span>
+  </div>
 
-  <h3>🛠 Debug Output</h3>
-  <pre id="debug">Loading...</pre>
+  <div class="products" id="productContainer"></div>
+  <div class="dashboard-view" id="dashboardContainer" style="display:none;"></div>
+
+  <div class="debug" id="debugOutput">⚒️ Debug Output</div>
 
   <script>
-    const scriptUrl = "YOUR_DEPLOYED_SCRIPT_URL"; // replace with your Apps Script URL
-    let allProducts = [];
-    let storeStatus = [];
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbwjs8iFcXbkXPcYbcvqAgKtU2grsMuxcoOOVY8Aox3nXppahHuktklIf7snHC86yN907Q/exec";
+    let allData = [];
+    let deals = new Set();
+    let isDashboard = false;
 
     async function loadData() {
       try {
         const res = await fetch(scriptUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-
-        if (data.error) {
-          document.getElementById("debug").innerText = "Server error: " + data.error;
-          return;
-        }
-
-        allProducts = data.products;
-        storeStatus = data.status;
-
+        allData = data;
+        document.getElementById("debugOutput").innerText = 
+          "Loaded " + data.length + " rows.";
         populateStores();
-        document.getElementById("debug").innerText =
-          "Loaded " + data.status.length + " ranging rows & " + data.products.length + " products.";
+        if (isDashboard) renderDashboard();
+        else renderProducts();
       } catch (err) {
-        document.getElementById("debug").innerText = "Error loading: " + err;
+        document.getElementById("debugOutput").innerText = 
+          "Error loading: " + err;
       }
     }
 
     function populateStores() {
-      const storeSelect = document.getElementById("storeSelect");
-      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(storeStatus.map(r => r.Store))];
-      stores.forEach(store => {
+      const select = document.getElementById("storeSelect");
+      select.innerHTML = "<option>-- Choose a store --</option>";
+      [...new Set(allData.map(r => r.Store))].forEach(store => {
         const opt = document.createElement("option");
         opt.value = store;
         opt.textContent = store;
-        storeSelect.appendChild(opt);
+        select.appendChild(opt);
       });
     }
 
-    function filterByStore() {
+    function renderProducts() {
+      if (isDashboard) return;
       const store = document.getElementById("storeSelect").value;
-      const container = document.getElementById("products");
+      const container = document.getElementById("productContainer");
       container.innerHTML = "";
+      if (!store || store === "-- Choose a store --") {
+        document.getElementById("dealSummary").style.display = "none";
+        return;
+      }
+      document.getElementById("dealSummary").style.display = "block";
 
-      if (!store) return;
-
-      // Get products not ranging for this store
-      const notRanging = storeStatus.filter(r => r.Store === store && r.Status === "not ranging");
-
-      notRanging.forEach(row => {
-        const product = allProducts.find(p => p.Product === row.Product);
-        if (!product) return;
-
+      const products = allData.filter(r => r.Store === store && r.Status === "not ranging");
+      products.forEach(p => {
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "product-card";
         card.innerHTML = `
-          <img src="${product['Image URL'] || ''}" alt="Product">
-          <div>
-            <strong>${product['Product']}</strong>
-            <p>Metcash Code: ${product['Metcash Code'] || '-'}</p>
-            <p>SDA Ranking: ${product['SDA Ranking'] || '-'}</p>
-            <p>Category: ${product['Category'] || '-'}</p>
-            <p>List Price: ${product['List Price'] || '-'}</p>
-            <p>50% Deal: ${product['50% Deal'] || '-'}</p>
-            <div class="buttons">
-              <button class="add">Add to Offer</button>
-              <button class="not" onclick="removeProduct(this)">Not Buying</button>
-            </div>
+          <img src="${p['Image URL'] || ''}" alt="Product">
+          <div class="product-info">
+            <div class="product-name">${p.Product}</div>
+            <div>Metcash Code: ${p['Metcash Code'] || '-'}</div>
+            <div>SDA Ranking: ${p['SDA Ranking'] || '-'}</div>
+            <div>Category: ${p['Category'] || '-'}</div>
+            <div>List Price: ${p['List Price'] || '-'}</div>
+            <div>50% Deal: ${p['50% Deal'] || '-'}</div>
+          </div>
+          <div class="buttons">
+            <button class="add" onclick="toggleDeal('${p.Product}', this)">Add to Offer</button>
+            <button class="not" onclick="removeProduct(this)">Not Buying</button>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
+    function renderDashboard() {
+      const container = document.getElementById("dashboardContainer");
+      container.innerHTML = "<h3>📊 Product Dashboard</h3>";
+      let grouped = {};
+      allData.forEach(r => {
+        if (!grouped[r.Product]) grouped[r.Product] = {img: r['Image URL'], red: 0, orange: 0, green: 0};
+        if (r.Status === "not ranging") grouped[r.Product].red++;
+        else if (r.Status === "not buying") grouped[r.Product].orange++;
+        else if (r.Status === "ranging") grouped[r.Product].green++;
+      });
+      Object.keys(grouped).forEach(prod => {
+        const g = grouped[prod];
+        const card = document.createElement("div");
+        card.className = "dash-card";
+        card.innerHTML = `
+          <img src="${g.img || ''}" alt="Product">
+          <div class="product-info">
+            <div class="product-name">${prod}</div>
+            <div class="bar red" style="width:${g.red*5}px"></div>
+            <div>🔴 ${g.red} 🟠 ${g.orange} 🟢 ${g.green}</div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function toggleDeal(product, btn) {
+      if (deals.has(product)) {
+        deals.delete(product);
+        btn.classList.remove("added");
+        btn.textContent = "Add to Offer";
+      } else {
+        deals.add(product);
+        btn.classList.add("added");
+        btn.textContent = "Added";
+      }
+      document.getElementById("dealTotal").innerText = 
+        "$" + (deals.size * 100).toFixed(2);
+    }
+
     function removeProduct(btn) {
-      btn.closest(".card").remove();
+      btn.closest(".product-card").remove();
+    }
+
+    function toggleView() {
+      isDashboard = !isDashboard;
+      document.getElementById("productContainer").style.display = isDashboard ? "none" : "block";
+      document.getElementById("storeSelect").style.display = isDashboard ? "none" : "inline-block";
+      document.getElementById("dealSummary").style.display = isDashboard ? "none" : "block";
+      document.getElementById("dashboardContainer").style.display = isDashboard ? "block" : "none";
+      document.querySelector(".dashboard").textContent = isDashboard ? "🏬 Switch to Store View" : "📊 Switch to Dashboard";
+      if (isDashboard) renderDashboard();
+      else renderProducts();
     }
 
     loadData();
