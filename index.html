@@ -7,15 +7,15 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
-    .store-select { margin: 10px 0; }
+    select, button { margin: 10px 0; padding: 8px; }
     .product-card {
       border: 1px solid #ddd;
       border-radius: 8px;
       padding: 12px;
       margin: 10px 0;
       display: flex;
-      align-items: center;
-      background: #f9f9f9;
+      align-items: flex-start;
+      background: #fafafa;
     }
     .product-card img {
       width: 80px;
@@ -24,10 +24,10 @@
       margin-right: 15px;
       background: #eee;
     }
-    .product-info { flex: 1; }
-    .buttons { display: flex; gap: 10px; }
+    .product-info { flex: 1; font-size: 14px; }
+    .buttons { display: flex; flex-direction: column; gap: 6px; }
     button {
-      padding: 6px 12px;
+      padding: 6px 10px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -40,84 +40,88 @@
   <h1>Store Ranging App</h1>
 
   <button onclick="loadData()">Refresh</button>
-  <div class="store-select">
-    <label for="store">Select a store:</label>
-    <select id="store" onchange="renderProducts()">
-      <option value="">-- Choose a store --</option>
-    </select>
-  </div>
+  <br>
+  <label for="storeSelect">Select a store:</label>
+  <select id="storeSelect" onchange="renderProducts()">
+    <option value="">-- Choose a store --</option>
+  </select>
 
-  <div id="product-list"></div>
+  <div id="products"></div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycby7QUigwdH7PFQVpBe2YH08ZfM09V7Cx3yRnbfwMiZ8DzRk5bkvlwPr9Auv--_nTjKJKg/exec";
     let allData = [];
 
     async function loadData() {
-      document.getElementById("product-list").innerHTML = "Loading...";
+      document.getElementById("products").innerHTML = "Loading...";
       try {
         const res = await fetch(API_URL);
         allData = await res.json();
 
         // unique store list
         const stores = [...new Set(allData.map(r => r.Store))].sort();
-        const storeSelect = document.getElementById("store");
-        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+        const select = document.getElementById("storeSelect");
+        select.innerHTML = '<option value="">-- Choose a store --</option>';
         stores.forEach(store => {
           const opt = document.createElement("option");
           opt.value = store;
           opt.textContent = store;
-          storeSelect.appendChild(opt);
+          select.appendChild(opt);
         });
 
-        document.getElementById("product-list").innerHTML = "";
+        document.getElementById("products").innerHTML = "";
       } catch (err) {
         console.error(err);
-        document.getElementById("product-list").innerHTML = "Error loading data.";
+        document.getElementById("products").innerHTML = "Error loading data.";
       }
     }
 
     function renderProducts() {
-      const store = document.getElementById("store").value;
-      const list = document.getElementById("product-list");
-      list.innerHTML = "";
+      const store = document.getElementById("storeSelect").value;
+      const container = document.getElementById("products");
+      container.innerHTML = "";
 
       if (!store) return;
 
-      const products = allData.filter(r => r.Store === store && r.Status === "Not Ranging");
+      const products = allData.filter(r =>
+        r.Store === store &&
+        r.Status &&
+        r.Status.trim().toLowerCase() === "not ranging"
+      );
 
       if (products.length === 0) {
-        list.innerHTML = "<p>No products found.</p>";
+        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
         return;
       }
 
       products.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "product-card";
+        const card = document.createElement("div");
+        card.className = "product-card";
 
-        div.innerHTML = `
-          <img src="${p['Image URL'] || ''}" alt="No Image">
+        card.innerHTML = `
+          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product Image">
           <div class="product-info">
             <strong>${p.Product}</strong><br>
-            Metcash Code: ${p['Metcash Code'] || '-'}<br>
-            SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
-            Category: ${p['Category'] || '-'}<br>
-            Layout: ${p['Metcash Layout'] || '-'}<br>
-            Base Range: ${p['Metcash Base Range'] || '-'}<br>
-            List Price: ${p['List Price'] || '-'}<br>
-            50% Deal: ${p['50% Deal'] || '-'}
+            <b>Metcash Code:</b> ${p['Metcash Code'] || '-'}<br>
+            <b>SDA Ranking:</b> ${p['SDA Ranking'] || '-'}<br>
+            <b>Category:</b> ${p['Category'] || '-'}<br>
+            <b>Layout:</b> ${p['Metcash Layout'] || '-'}<br>
+            <b>Base Range:</b> ${p['Metcash Base Range'] || '-'}<br>
+            <b>List Price:</b> ${p['List Price'] || '-'}<br>
+            <b>50% Deal:</b> ${p['50% Deal'] || '-'}
           </div>
           <div class="buttons">
-            <button class="add-btn" onclick="addToOffer('${store}','${p.Product}')">Add to Offer</button>
-            <button class="not-btn" onclick="markNotBuying('${store}','${p.Product}')">Not Buying</button>
+            <button class="add-btn" onclick="addToOffer('${p.Store}','${p.Product}')">Add to Offer</button>
+            <button class="not-btn" onclick="markNotBuying('${p.Store}','${p.Product}')">Not Buying</button>
           </div>
         `;
-        list.appendChild(div);
+
+        container.appendChild(card);
       });
     }
 
     function addToOffer(store, product) {
-      alert(`Added ${product} from ${store} to offer.`);
+      alert(`${product} added to offer for ${store}`);
     }
 
     async function markNotBuying(store, product) {
@@ -129,9 +133,10 @@
         });
         const result = await res.json();
         alert(result.message || "Updated");
-        loadData();
+        loadData(); // reload after update
       } catch (err) {
         console.error("Error:", err);
+        alert("Failed to update.");
       }
     }
 
