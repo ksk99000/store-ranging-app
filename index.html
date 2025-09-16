@@ -2,79 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
+    .store-select { margin: 10px 0; }
     .product-card {
       border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 10px;
+      padding: 12px;
       margin: 10px 0;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
+      background: #fafafa;
     }
     .product-card img {
       width: 80px;
       height: 80px;
       object-fit: contain;
       margin-right: 15px;
+      background: #eee;
     }
     .product-info { flex-grow: 1; }
     .product-info p { margin: 4px 0; }
+    .buttons { margin-left: 15px; display: flex; flex-direction: column; gap: 6px; }
+    button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .add-btn { background: #007bff; color: #fff; }
+    .not-btn { background: #dc3545; color: #fff; }
+    .placeholder-img { background: #ddd; display: inline-block; width:80px; height:80px; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
   <br><br>
+
   <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="displayProducts()">
+  <select id="storeSelect" onchange="renderProducts()">
     <option value="">-- Choose a store --</option>
   </select>
+
   <div id="products"></div>
 
   <script>
-    const apiUrl = "https://script.google.com/macros/s/AKfycbzAtNj6NR8Wv1tclQbOkLezsosOeGRLIVpkwtg4h8OkMAHCMfNKfpo9zf3ZdtT3ysJ0RA/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxk_xDNMBSOacqdDq-IVykQYPSaJpsb37qD57CfSVP6l6ro8Au5g9D6JmsLCefT6xAQsQ/exec";
     let allData = [];
 
     async function loadData() {
       document.getElementById("products").innerHTML = "Loading...";
       try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error("Network error " + res.status);
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("Network response was not ok: " + res.status);
         allData = await res.json();
 
-        // unique store list
+        // Build store dropdown
         const stores = [...new Set(allData.map(item => item.Store))].filter(s => s);
-        const storeSelect = document.getElementById("storeSelect");
-        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+        const select = document.getElementById("storeSelect");
+        select.innerHTML = '<option value="">-- Choose a store --</option>';
         stores.forEach(store => {
           const opt = document.createElement("option");
           opt.value = store;
           opt.textContent = store;
-          storeSelect.appendChild(opt);
+          select.appendChild(opt);
         });
 
-        document.getElementById("products").innerHTML = "Select a store to see products.";
+        document.getElementById("products").innerHTML = "Select a store to see Not Ranging products.";
       } catch (err) {
-        document.getElementById("products").innerHTML = "Error loading data: " + err;
-        console.error(err);
+        console.error("Error loading data:", err);
+        document.getElementById("products").innerHTML = "Error loading data.";
       }
     }
 
-    function displayProducts() {
+    function renderProducts() {
       const store = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
       container.innerHTML = "";
 
-      if (!store) return;
+      if (!store) {
+        return;
+      }
 
-      const products = allData.filter(item => item.Store === store && item.Status === "Not Ranging");
+      const products = allData.filter(item =>
+        item.Store === store &&
+        item.Status &&
+        item.Status.trim().toLowerCase() === "not ranging"
+      );
 
       if (products.length === 0) {
-        container.innerHTML = "<p>No products found.</p>";
+        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
         return;
       }
 
@@ -83,8 +104,12 @@
         card.className = "product-card";
 
         const img = document.createElement("img");
-        img.src = p["Image URL"] || "https://via.placeholder.com/80";
+        img.src = p["Image URL"] || "";
         img.alt = p.Product || "No Image";
+        if (!p["Image URL"]) {
+          // If no image URL, show a placeholder
+          img.style.background = "#ccc";
+        }
 
         const info = document.createElement("div");
         info.className = "product-info";
@@ -105,8 +130,8 @@
       });
     }
 
-    // Load data on start
-    loadData();
+    // Auto-load stored data on page load
+    window.onload = loadData;
   </script>
 </body>
 </html>
