@@ -2,89 +2,179 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📱 Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App v2.0.0</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; padding:0; }
-    header { background:#007bff; color:white; text-align:center; padding:10px; }
-    header small { display:block; font-size:0.8em; margin-top:4px; color:#e0e0e0; }
-    .container { padding:15px; }
-    button { background:#007bff; color:white; border:none; padding:8px 12px; border-radius:6px; margin-right:10px; }
-    select { padding:8px; border-radius:6px; }
-    .debug { background:#fff3cd; border-left:4px solid #ffecb5; padding:10px; margin-top:20px; font-family:monospace; white-space:pre-wrap; word-wrap:break-word; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    .active-store { background-color: #2563eb; color: white; }
+    .deal-button.selected { background-color: #16a34a; color: white; font-weight: bold; }
+    #product-info-tooltip { z-index: 50; }
+    #reset-modal, #image-modal { z-index: 60; }
   </style>
 </head>
-<body>
-  <header>
-    <h1>📱 Store Ranging App</h1>
-    <small>Version: v1.3.0 (17 Sept 2025)</small>
-  </header>
+<body class="bg-gray-100">
+  <div class="h-screen flex flex-col">
+    <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+      <h1 class="text-xl font-bold">📱 Store Ranging App</h1>
+      <span class="text-sm opacity-80">v2.0.0 (17 Sept 2025)</span>
+    </header>
 
-  <div class="container">
-    <button onclick="loadData()">🔄 Refresh</button>
-    <select id="storeSelect">
-      <option value="">-- Choose a store --</option>
-    </select>
+    <main class="flex-1 overflow-y-auto p-4">
+      <!-- Store Selector -->
+      <div class="mb-4">
+        <label class="block mb-2 text-sm font-medium text-gray-700">Choose a store</label>
+        <select id="storeSelect" class="p-2 border rounded w-full"></select>
+      </div>
 
-    <h2>Products</h2>
-    <div id="products"></div>
+      <!-- Deal Offer Summary -->
+      <div id="deal-offer-box" class="mb-4 p-4 bg-blue-100 border border-blue-200 rounded-lg hidden">
+        <h3 class="font-bold text-lg text-blue-800">Total Deal Offer Summary</h3>
+        <p class="text-sm text-blue-600">Based on 50% Deal Price</p>
+        <p id="deal-total" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p>
+        <ul id="deal-list" class="mt-2 text-sm list-disc list-inside text-gray-700 space-y-1"></ul>
+      </div>
 
-    <h2>🛠️ Debug Output</h2>
-    <div id="debug" class="debug">Waiting for data...</div>
+      <!-- Product Results -->
+      <div id="results-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </main>
+
+    <!-- Tooltip Modal -->
+    <div id="product-info-tooltip" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+          <h4 id="tooltip-product-name" class="font-bold text-lg text-gray-800">Product Details</h4>
+          <button onclick="closeTooltip()" class="text-gray-400 hover:text-gray-800">&times;</button>
+        </div>
+        <div id="tooltip-content" class="space-y-2 text-sm text-gray-700"></div>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbw2a7r1uV7_WdypuPWlR0TNsv_8dlp70naBfdcAnA6xzKWFD6nwrx9gyP3YdVsMUGUchQ/exec";
+<script>
+const webAppUrl = "https://script.google.com/macros/s/AKfycbx22kAm7uHFPV2i9B63H_P9vsxzaNVs9N5Sful2G-iRh2egOuZxQPDdEsWGXINj0iqdtQ/exec";
 
-    async function loadData() {
-      const debugBox = document.getElementById("debug");
-      const storeSelect = document.getElementById("storeSelect");
-      const productsDiv = document.getElementById("products");
+let allDeals = [];
+let allRanging = [];
+let currentStore = null;
+let selectedDeals = new Map();
 
-      debugBox.textContent = "⏳ Loading data...";
-      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-      productsDiv.innerHTML = "";
+async function loadData() {
+  try {
+    const res = await fetch(webAppUrl);
+    const data = await res.json();
+    allDeals = data.deals || [];
+    allRanging = data.ranging || [];
+    populateStores();
+  } catch (err) {
+    alert("Failed to load data: " + err.message);
+  }
+}
 
-      try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
+function populateStores() {
+  const storeSelect = document.getElementById("storeSelect");
+  storeSelect.innerHTML = '<option value="">-- Select a store --</option>';
+  const stores = [...new Set(allRanging.map(r => r.store))];
+  stores.forEach(store => {
+    const opt = document.createElement("option");
+    opt.value = store;
+    opt.textContent = store;
+    storeSelect.appendChild(opt);
+  });
+  storeSelect.addEventListener("change", () => {
+    currentStore = storeSelect.value;
+    renderProducts();
+  });
+}
 
-        debugBox.textContent = JSON.stringify(data, null, 2);
+function renderProducts() {
+  const container = document.getElementById("results-container");
+  container.innerHTML = "";
+  if (!currentStore) return;
 
-        // ✅ Parse stores from sampleData.Data (skip header row)
-        if (data.sampleData && data.sampleData.Data) {
-          const rows = data.sampleData.Data;
-          for (let i = 1; i < rows.length; i++) {
-            const storeId = rows[i][0];
-            const storeName = rows[i][1];
-            const opt = document.createElement("option");
-            opt.value = storeId;
-            opt.textContent = storeName;
-            storeSelect.appendChild(opt);
-          }
-        }
+  const notRanging = allRanging.filter(r => r.store === currentStore && r.status === "Not Ranging");
 
-        // ✅ Show first 10 deals
-        if (data.sampleData && data.sampleData.Deals) {
-          data.sampleData.Deals.slice(0, 10).forEach(item => {
-            const div = document.createElement("div");
-            div.style.border = "1px solid #ddd";
-            div.style.margin = "5px 0";
-            div.style.padding = "10px";
-            div.style.borderRadius = "6px";
-            div.innerHTML = `
-              <strong>${item.product}</strong><br>
-              Code: ${item.code} | SDA: ${item.sda || "N/A"}<br>
-              <img src="${item.image}" style="max-width:100px;margin-top:5px">
-            `;
-            productsDiv.appendChild(div);
-          });
-        }
+  notRanging.forEach(r => {
+    const deal = allDeals.find(d => d.product === r.product);
+    const div = document.createElement("div");
+    div.className = "product bg-white border rounded-lg shadow p-4 flex flex-col";
 
-      } catch (err) {
-        debugBox.textContent = "❌ Error: " + err.message;
+    div.innerHTML = `
+      <img src="${deal?.image || ""}" class="h-24 object-contain mb-2 rounded">
+      <h3 class="font-bold text-gray-900">${deal?.product || r.product}</h3>
+      <p class="text-sm text-gray-600">Metcash Code: ${deal?.code || "N/A"}</p>
+      <p class="text-sm text-gray-600">50% Deal: ${deal?.deal || "N/A"}</p>
+      <button class="deal-button mt-2 px-3 py-1 bg-green-600 text-white rounded" 
+        onclick="toggleDeal('${deal?.product || r.product}', ${deal?.deal || 0})">
+        Add to Offer
+      </button>
+    `;
+    div.addEventListener("click", e => {
+      if (!e.target.classList.contains("deal-button")) {
+        showTooltip(deal || r);
       }
-    }
-  </script>
+    });
+    container.appendChild(div);
+  });
+}
+
+function toggleDeal(product, price) {
+  const btns = [...document.querySelectorAll(".deal-button")].filter(b => b.parentElement.querySelector("h3").innerText === product);
+  if (selectedDeals.has(product)) {
+    selectedDeals.delete(product);
+    btns.forEach(b => { b.classList.remove("selected"); b.innerText = "Add to Offer"; });
+  } else {
+    selectedDeals.set(product, price);
+    btns.forEach(b => { b.classList.add("selected"); b.innerText = "Added"; });
+  }
+  updateDealSummary();
+}
+
+function updateDealSummary() {
+  const box = document.getElementById("deal-offer-box");
+  const totalEl = document.getElementById("deal-total");
+  const listEl = document.getElementById("deal-list");
+
+  if (selectedDeals.size === 0) {
+    box.classList.add("hidden");
+    return;
+  }
+
+  box.classList.remove("hidden");
+  listEl.innerHTML = "";
+  let total = 0;
+  selectedDeals.forEach((price, product) => {
+    total += parseFloat(price) || 0;
+    const li = document.createElement("li");
+    li.textContent = product + " - $" + price;
+    listEl.appendChild(li);
+  });
+  totalEl.textContent = "$" + total.toFixed(2);
+}
+
+function showTooltip(product) {
+  const modal = document.getElementById("product-info-tooltip");
+  const title = document.getElementById("tooltip-product-name");
+  const content = document.getElementById("tooltip-content");
+
+  title.textContent = product.product || "Product Details";
+  content.innerHTML = `
+    <p><strong>Metcash Code:</strong> ${product.code || "N/A"}</p>
+    <p><strong>50% Deal:</strong> ${product.deal || "N/A"}</p>
+    <p><strong>SDA Ranking:</strong> ${product.sda || "N/A"}</p>
+    <p><strong>Category:</strong> ${product.category || "N/A"}</p>
+    <p><strong>Base Range:</strong> ${product.baserange || "N/A"}</p>
+    <p><strong>Layout:</strong> ${product.layout || "N/A"}</p>
+    <p><strong>List Price:</strong> ${product.price || "N/A"}</p>
+  `;
+  modal.classList.remove("hidden");
+}
+
+function closeTooltip() {
+  document.getElementById("product-info-tooltip").classList.add("hidden");
+}
+
+window.onload = loadData;
+</script>
 </body>
 </html>
