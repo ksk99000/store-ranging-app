@@ -4,195 +4,116 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .store-select { margin-bottom: 20px; }
+    .product-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .product-info { flex-grow: 1; }
+    button {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .offer-btn { background: #007bff; color: white; margin-left: 10px; }
+    .not-btn { background: #dc3545; color: white; margin-left: 10px; }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <header class="bg-white shadow p-4 flex justify-between items-center">
-    <h1 class="text-xl font-bold">Store Ranging App</h1>
-    <button id="refresh-btn" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">Refresh</button>
-  </header>
+<body>
+  <h2>Store Ranging App</h2>
+  <button onclick="loadData()">Refresh</button>
+  <div class="store-select">
+    <label for="storeDropdown">Select a store:</label>
+    <select id="storeDropdown" onchange="renderProducts()">
+      <option value="">-- Choose a store --</option>
+    </select>
+  </div>
 
-  <main class="p-4">
-    <!-- Deal Offer Summary -->
-    <div id="deal-offer-box" class="mb-4 p-4 bg-blue-100 border border-blue-200 rounded-lg hidden">
-      <h3 class="font-bold text-lg text-blue-800">Total Deal Offer Summary</h3>
-      <p class="text-sm text-blue-600">Based on 50% Deal Price</p>
-      <p id="deal-total" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p>
-      <ul id="deal-list" class="mt-2 text-sm list-disc list-inside text-slate-700 space-y-1"></ul>
-    </div>
-
-    <!-- Store Selector -->
-    <div class="mb-4">
-      <label class="block mb-2 font-semibold">Select a store</label>
-      <select id="store-select" class="w-full border rounded p-2"></select>
-    </div>
-
-    <!-- Product List -->
-    <div id="product-grid" class="space-y-3"></div>
-  </main>
+  <div id="productList"></div>
 
   <script>
-    // ✅ Your live Apps Script URL
-    const webAppUrl = 'https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec';
+    const API_URL = "https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec";
+    let allData = [];
 
-    let rangingData = [];
-    let dealsData = [];
-    let dealsIndex = new Map();
-    let selectedDeals = {};
-
-    // Normalize product names for reliable matching
-    function normName(s) {
-      return String(s || "")
-        .replace(/^[*"'`]+/, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toUpperCase();
-    }
-
-    function buildDealsIndex() {
-      dealsIndex = new Map();
-      dealsData.forEach(d => {
-        const key = normName(d.product);
-        if (key && !dealsIndex.has(key)) dealsIndex.set(key, d);
-      });
-    }
-
-    async function fetchData() {
+    async function loadData() {
       try {
-        const res = await fetch(webAppUrl);
-        const data = await res.json();
-        rangingData = data.rangingData || [];
-        dealsData = data.dealsData || [];
-        buildDealsIndex();
-        populateStores();
+        const res = await fetch(API_URL);
+        allData = await res.json();
+
+        // Get unique store names
+        const stores = [...new Set(allData.map(row => row.Store))];
+        const dropdown = document.getElementById("storeDropdown");
+        dropdown.innerHTML = `<option value="">-- Choose a store --</option>`;
+        stores.forEach(store => {
+          dropdown.innerHTML += `<option value="${store}">${store}</option>`;
+        });
       } catch (err) {
-        console.error("Error fetching data", err);
+        alert("Error loading data");
+        console.error(err);
       }
     }
 
-    function populateStores() {
-      const select = document.getElementById("store-select");
-      select.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(rangingData.map(r => r[0]))].sort();
-      stores.forEach(store => {
-        const opt = document.createElement("option");
-        opt.value = store;
-        opt.textContent = store;
-        select.appendChild(opt);
-      });
-    }
+    function renderProducts() {
+      const store = document.getElementById("storeDropdown").value;
+      const list = document.getElementById("productList");
+      list.innerHTML = "";
 
-    function showStoreProducts(store) {
-      const grid = document.getElementById("product-grid");
-      grid.innerHTML = "";
       if (!store) return;
 
-      const rows = rangingData.filter(r => r[0] === store && r[2] === "Not Ranging");
-      rows.forEach(row => {
-        const productName = row[1];
-        const deal = dealsIndex.get(normName(productName)) || null;
+      // Filter products for selected store where Status = "Not Ranging"
+      const products = allData.filter(row => row.Store === store && row.Status === "Not Ranging");
 
-        const metcashCode = deal?.metcashcode ?? deal?.["Metcash Code"] ?? "—";
-        const fiftyPercentDeal = deal?.["50deal"] ?? deal?.["50% Deal"] ?? "—";
-        const imageUrl = deal?.imageurl || "https://placehold.co/100x100?text=No+Image";
-
-        const card = document.createElement("div");
-        card.className = "bg-white rounded shadow p-3";
-
-        const isSelected = selectedDeals[productName];
-        card.innerHTML = `
-          <div class="flex items-center space-x-4">
-            <img src="${imageUrl}" alt="${productName}" class="w-16 h-16 rounded object-cover">
-            <div class="flex-1">
-              <div class="font-semibold">${productName}</div>
-              <div class="text-xs text-slate-600">Metcash Code: ${metcashCode}</div>
-              <div class="text-xs text-slate-600">50% Deal: $${fiftyPercentDeal}</div>
-            </div>
-            <div class="flex flex-col space-y-1">
-              <button class="px-3 py-1 rounded text-white text-sm ${isSelected ? 'bg-green-600' : 'bg-blue-600'} deal-btn">
-                ${isSelected ? 'Added' : 'Add to Offer'}
-              </button>
-              <button class="px-3 py-1 rounded text-white text-sm bg-red-600 notbuy-btn">
-                Not Buying
-              </button>
-            </div>
-          </div>
-        `;
-
-        const addBtn = card.querySelector(".deal-btn");
-        addBtn.addEventListener("click", () => toggleDeal(productName, fiftyPercentDeal, addBtn));
-
-        const notBuyBtn = card.querySelector(".notbuy-btn");
-        notBuyBtn.addEventListener("click", () => markNotBuying(store, productName, card));
-
-        grid.appendChild(card);
-      });
-
-      renderDealSummary();
-    }
-
-    function toggleDeal(productName, dealPrice, btn) {
-      if (selectedDeals[productName]) {
-        delete selectedDeals[productName];
-      } else {
-        selectedDeals[productName] = parseFloat(dealPrice) || 0;
-      }
-      btn.className = `px-3 py-1 rounded text-white text-sm ${selectedDeals[productName] ? 'bg-green-600' : 'bg-blue-600'}`;
-      btn.textContent = selectedDeals[productName] ? "Added" : "Add to Offer";
-      renderDealSummary();
-    }
-
-    function renderDealSummary() {
-      const box = document.getElementById("deal-offer-box");
-      const totalEl = document.getElementById("deal-total");
-      const list = document.getElementById("deal-list");
-
-      const entries = Object.entries(selectedDeals);
-      if (entries.length === 0) {
-        box.classList.add("hidden");
+      if (products.length === 0) {
+        list.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
         return;
       }
 
-      box.classList.remove("hidden");
-      let total = 0;
-      list.innerHTML = "";
-      entries.forEach(([name, price]) => {
-        total += price;
-        const li = document.createElement("li");
-        li.textContent = `${name} - $${price.toFixed(2)}`;
-        list.appendChild(li);
+      products.forEach(product => {
+        const card = document.createElement("div");
+        card.className = "product-card";
+        card.innerHTML = `
+          <div class="product-info">
+            <strong>${product.Product}</strong><br>
+            Status: ${product.Status}
+          </div>
+          <div>
+            <button class="offer-btn" onclick="addToOffer('${product.Store}', '${product.Product}')">Add to Offer</button>
+            <button class="not-btn" onclick="markNotBuying('${product.Store}', '${product.Product}')">Not Buying</button>
+          </div>
+        `;
+        list.appendChild(card);
       });
-      totalEl.textContent = `$${total.toFixed(2)}`;
     }
 
-    // 🔴 New function: Mark product as Not Buying
-    async function markNotBuying(store, product, cardElement) {
+    async function addToOffer(store, product) {
+      alert(`${product} added to offer for ${store}`);
+      // optional: add POST request back to sheet if needed
+    }
+
+    async function markNotBuying(store, product) {
       try {
-        const res = await fetch(webAppUrl, {
+        await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ store, product })
+          body: JSON.stringify({ Store: store, Product: product, Status: "Not Buying" })
         });
-
-        const result = await res.json();
-        if (result.success) {
-          // Remove product from the list
-          cardElement.remove();
-        } else {
-          alert("Failed to update: " + result.error);
-        }
+        alert(`${product} marked as Not Buying for ${store}`);
+        loadData(); // reload after update
       } catch (err) {
-        alert("Error sending update: " + err.message);
+        console.error("Error updating status:", err);
       }
     }
 
-    document.getElementById("store-select").addEventListener("change", e => {
-      showStoreProducts(e.target.value);
-    });
-
-    document.getElementById("refresh-btn").addEventListener("click", fetchData);
-
-    fetchData();
+    // Load on startup
+    loadData();
   </script>
 </body>
 </html>
