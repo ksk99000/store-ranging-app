@@ -17,6 +17,7 @@
     .add.added { background: green; }
     .not { background: red; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
     #products { margin-top: 20px; }
+    #offerList { margin-top: 10px; padding-left: 20px; }
     #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
   </style>
 </head>
@@ -34,11 +35,10 @@
 
   <div class="summary">
     <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
+    <ul id="offerList"></ul>
   </div>
 
-  <div id="products">
-    <!-- Product cards will go here -->
-  </div>
+  <div id="products"></div>
 
   <div>
     <h3>Raw JSON Debug Output</h3>
@@ -48,15 +48,14 @@
   <script>
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
     let allData = [];
-    let total = 0;
+    let selectedDeals = {}; // { productName: value }
 
     async function loadData() {
       try {
         document.getElementById("debug").textContent = "Loading data...";
         const resp = await fetch(scriptUrl);
         const json = await resp.json();
-        // Save filtered data or all depending on your logic
-        allData = json;  
+        allData = json;
 
         document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
 
@@ -70,7 +69,6 @@
 
     function populateStores() {
       const select = document.getElementById("storeSelect");
-      // Clear previous options
       select.innerHTML = '<option value="">-- Choose a store --</option>';
       const stores = [...new Set(allData.map(d => d.Store))].sort();
       stores.forEach(storeName => {
@@ -82,8 +80,8 @@
     }
 
     function resetSummary() {
-      total = 0;
-      document.getElementById("total").textContent = total.toFixed(2);
+      selectedDeals = {};
+      updateSummary();
     }
 
     function renderProducts() {
@@ -96,7 +94,6 @@
         return;
       }
 
-      // Filter data: matching store AND status "Not Ranging"
       const filtered = allData.filter(item => 
         item.Store === storeName && String(item.Status).trim().toLowerCase() === "not ranging"
       );
@@ -111,30 +108,23 @@
         card.className = "card";
 
         const img = document.createElement("img");
-        img.src = p["Image URL"] || "";  // fallback if empty
+        img.src = p["Image URL"] || "";
         img.alt = p.Product || "Product";
 
         const detailsDiv = document.createElement("div");
         detailsDiv.className = "details";
-
-        // Add product text
-        const nameEl = document.createElement("strong");
-        nameEl.textContent = p.Product || "-";
-
-        // Build HTML inner for details
-        let inner = `
-          <div>${p["Metcash Code"] || "-"} <br>
-          ${p["SDA Ranking"] || "-"} <br>
-          ${p["Category"] || "-"} <br>
-          ${p["Metcash Layout"] || "-"} <br>
-          ${p["Metcash Base Range"] || "-"} <br>
-          List Price: ${p["List Price"] || "-"} <br>
-          50% Deal: ${p["50% Deal"] || "-"} <br>
-          Status: ${p["Status"] || "-"}</div>
+        detailsDiv.innerHTML = `
+          <b>${p['Product'] || '-'}</b><br>
+          Metcash Code: ${p['Metcash Code'] || '-'}<br>
+          SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
+          Category: ${p['Category'] || '-'}<br>
+          Layout: ${p['Metcash Layout'] || '-'}<br>
+          Base Range: ${p['Metcash Base Range'] || '-'}<br>
+          List Price: ${p['List Price'] || '-'}<br>
+          50% Deal: ${p['50% Deal'] || '-'}<br>
+          Status: ${p['Status'] || '-'}
         `;
-        detailsDiv.innerHTML = inner;
 
-        // Buttons
         const btnDiv = document.createElement("div");
         btnDiv.className = "buttons";
 
@@ -156,18 +146,15 @@
 
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
-
         detailsDiv.appendChild(btnDiv);
 
         card.appendChild(img);
         const rightDiv = document.createElement("div");
         rightDiv.style.flex = "1";
-        rightDiv.appendChild(nameEl);
         rightDiv.appendChild(detailsDiv);
         card.appendChild(rightDiv);
 
         card.onclick = function(e) {
-          // toggle details visibility unless clicked a button
           if (!e.target.classList.contains("add") && !e.target.classList.contains("not")) {
             detailsDiv.style.display = (detailsDiv.style.display === "flex" ? "none" : "flex");
           }
@@ -178,29 +165,40 @@
     }
 
     function toggleOffer(btn, productObj) {
+      const productName = productObj["Product"];
+      const dealValue = parseFloat(productObj["50% Deal"]) || 0;
+
       if (btn.classList.contains("added")) {
+        delete selectedDeals[productName];
         btn.classList.remove("added");
         btn.textContent = "Add to Offer";
-        // subtract from total
-        const val = parseFloat(productObj["List Price"]) || 0;
-        total -= val;
       } else {
+        selectedDeals[productName] = dealValue;
         btn.classList.add("added");
         btn.textContent = "Added";
-        const val = parseFloat(productObj["List Price"]) || 0;
-        total += val;
       }
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const total = Object.values(selectedDeals).reduce((a, b) => a + b, 0);
       document.getElementById("total").textContent = total.toFixed(2);
+
+      const list = document.getElementById("offerList");
+      list.innerHTML = "";
+      Object.entries(selectedDeals).forEach(([name, value]) => {
+        const li = document.createElement("li");
+        li.textContent = `${name} - $${value.toFixed(2)}`;
+        list.appendChild(li);
+      });
     }
 
     function removeProduct(cardElem, productObj) {
       cardElem.remove();
-      // Optionally send update back to script about status change
+      // Optional: send update back to script
     }
 
-    // Initial load
     loadData();
-
   </script>
 </body>
 </html>
