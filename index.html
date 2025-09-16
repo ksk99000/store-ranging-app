@@ -1,136 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Store Ranging App</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f4f7fb;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-    }
-    h1 {
-      font-size: 22px;
-      margin-bottom: 10px;
-      color: #0056d6;
-    }
-    select, button {
-      padding: 8px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .product-card {
-      display: flex;
-      align-items: center;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .product-card img {
-      width: 80px;
-      height: 80px;
-      object-fit: contain;
-      margin-right: 15px;
-      border-radius: 6px;
-      background: #fafafa;
-    }
-    .product-info {
-      flex: 1;
-    }
-    .debug {
-      background: #fff5e1;
-      padding: 10px;
-      margin-top: 15px;
-      border: 1px solid #f0d48c;
-      border-radius: 6px;
-      font-size: 12px;
-      white-space: pre-wrap;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Store Ranging App</title>
+<style>
+  :root{
+    --blue:#0a66ff; --green:#14b85a; --red:#e43f3f; --orange:#f59e0b;
+    --bg:#f3f5f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;background:var(--bg);color:#111}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  header h1{font-size:28px;margin:0;color:var(--blue)}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:8px 0 16px}
+  button,select{font-size:16px;border-radius:10px;border:1px solid var(--border);padding:10px 12px;background:#fff}
+  button{background:var(--blue);border:none;color:#fff}
+  button.secondary{background:#e8f1ff;color:#0a4bd6}
+  .summary{background:#eef5ff;padding:14px;border-radius:12px;border:1px solid var(--border);margin:6px 0 16px}
+  h2{margin:16px 0 8px}
+  #products{display:grid;grid-template-columns:1fr;gap:12px}
+  .card{display:flex;gap:12px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:14px}
+  .img{width:84px;height:84px;border-radius:10px;background:#f8fafc;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .img img{width:100%;height:100%;object-fit:contain}
+  .info{flex:1}
+  .title{font-weight:700;margin-bottom:6px}
+  .kv{color:var(--muted);font-size:14px;line-height:1.35}
+  .debug{white-space:pre-wrap;background:#fff7e6;border:1px solid #f4d38b;border-radius:12px;padding:12px;margin-top:12px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+  .pill.green{background:#e9fbf2;color:#0f7b45;border:1px solid #b8f0d3}
+  .pill.red{background:#ffecec;color:#a11e1e;border:1px solid #ffcccc}
+</style>
 </head>
 <body>
-  <h1>📱 Store Ranging App</h1>
 
-  <button onclick="loadData()">🔄 Refresh</button>
-  <br>
-  <label>Select a store:</label>
-  <select id="storeSelect" onchange="filterByStore()">
+<header>
+  <h1>📱 Store Ranging App</h1>
+</header>
+
+<div class="row">
+  <button id="refreshBtn" onclick="loadData()">🔄 Refresh</button>
+  <select id="storeSelect" onchange="renderForStore()">
     <option value="">-- Choose a store --</option>
   </select>
+</div>
 
-  <h2>Products</h2>
-  <div id="products"></div>
+<div id="dealSummary" class="summary" style="display:none">
+  <div style="font-weight:700">Total Deal Offer Summary</div>
+  <div id="dealTotal">$0.00</div>
+</div>
 
-  <h3>🛠 Debug Output</h3>
-  <div id="debug" class="debug"></div>
+<h2>Products</h2>
+<div id="products"></div>
 
-  <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbx22kAm7uHFPV2i9B63H_P9vsxzaNVs9N5Sful2G-iRh2egOuZxQPDdEsWGXINj0iqdtQ/exec";
-    let allData = { deals: [], ranging: [] };
+<h2>🛠 Debug Output</h2>
+<div id="debug" class="debug">Waiting…</div>
 
-    async function loadData() {
-      document.getElementById("debug").textContent = "Loading...";
-      try {
-        const res = await fetch(scriptUrl);
-        const data = await res.json();
-        allData = data;
+<script>
+const scriptUrl = "https://script.google.com/macros/s/AKfycbx22kAm7uHFPV2i9B63H_P9vsxzaNVs9N5Sful2G-iRh2egOuZxQPDdEsWGXINj0iqdtQ/exec";
 
-        // ✅ Debug info
-        document.getElementById("debug").textContent = JSON.stringify(data, null, 2);
+let MODEL = {
+  deals: [],   // array of product master rows (Image URL, Metcash Code, 50% Deal, etc.)
+  ranging: [], // array of {Store, Product, Status}
+  raw: null
+};
 
-        // Build store list
-        const stores = [...new Set(allData.ranging.map(r => r.Store))].filter(s => s);
-        const select = document.getElementById("storeSelect");
-        select.innerHTML = '<option value="">-- Choose a store --</option>';
-        stores.forEach(store => {
-          const opt = document.createElement("option");
-          opt.value = store;
-          opt.textContent = store;
-          select.appendChild(opt);
-        });
+function hasKeys(arr, keys){
+  if (!Array.isArray(arr) || !arr.length || typeof arr[0] !== 'object') return false;
+  const k = Object.keys(arr[0]).map(x => x.toLowerCase());
+  return keys.every(kk => k.includes(kk.toLowerCase()));
+}
 
-      } catch (err) {
-        document.getElementById("debug").textContent = "Error loading: " + err;
-      }
+function normalizeShape(data){
+  // Default empty model
+  let deals = [], ranging = [];
+
+  // Some backends return arrays only
+  if (Array.isArray(data)) {
+    // If it looks like ranging rows, treat as such
+    if (hasKeys(data, ["store","product"])) {
+      ranging = data;
+    } else {
+      deals = data; // single sheet with product details
     }
+    return {deals, ranging};
+  }
 
-    function filterByStore() {
-      const store = document.getElementById("storeSelect").value;
-      const container = document.getElementById("products");
-      container.innerHTML = "";
+  // If there's an error payload, show it and bail gracefully
+  if (data && data.error) {
+    throw new Error(data.error);
+  }
 
-      if (!store) return;
+  // Probe common key names (case-insensitive)
+  const lowerKeys = Object.keys(data || {}).reduce((acc,k)=> (acc[k.toLowerCase()] = data[k], acc), {});
+  // Try direct names first
+  deals   = Array.isArray(lowerKeys["deals"])   ? lowerKeys["deals"]   : deals;
+  ranging = Array.isArray(lowerKeys["ranging"]) ? lowerKeys["ranging"] : ranging;
 
-      // Filter ranging data for this store
-      const storeRows = allData.ranging.filter(r => r.Store === store);
-
-      storeRows.forEach(row => {
-        const product = allData.deals.find(d => d.Product === row.Product);
-
-        const card = document.createElement("div");
-        card.className = "product-card";
-        card.innerHTML = `
-          <img src="${product?.['Image URL'] || ''}" alt="Product">
-          <div class="product-info">
-            <strong>${row.Product}</strong><br>
-            Status: ${row.Status || 'N/A'}<br>
-            Metcash Code: ${product?.['Metcash Code'] || '-'}<br>
-            SDA Ranking: ${product?.['SDA Ranking'] || '-'}
-          </div>
-        `;
-        container.appendChild(card);
-      });
+  // Alternate names
+  if (!deals)   deals   = [];
+  if (!ranging) ranging = [];
+  if (!deals.length){
+    for (const [k,v] of Object.entries(data||{})){
+      if (Array.isArray(v) && hasKeys(v, ["image url","metcash code"])) { deals = v; break; }
     }
+  }
+  if (!ranging.length){
+    for (const [k,v] of Object.entries(data||{})){
+      if (Array.isArray(v) && hasKeys(v, ["store","product"])) { ranging = v; break; }
+    }
+  }
 
-    // Load on start
-    loadData();
-  </script>
+  // Final fallback: if nothing looked like ranging but something looked like products,
+  // show whatever we have as "deals" and render without store filtering.
+  return {deals, ranging};
+}
+
+function fmtMoney(v){
+  const n = Number(v);
+  return isFinite(n) ? n.toLocaleString(undefined,{style:"currency",currency:"AUD"}) : (v ?? "-");
+}
+
+async function loadData(){
+  const debug = document.getElementById("debug");
+  const productsDiv = document.getElementById("products");
+  const storeSel = document.getElementById("storeSelect");
+  productsDiv.innerHTML = "";
+  debug.textContent = "Loading…";
+
+  try{
+    const res = await fetch(scriptUrl, {cache: "no-store"});
+    // Some Apps Script deployments return text/html on error — try JSON first, then parse text
+    let data;
+    const text = await res.text();
+    try { data = JSON.parse(text); } catch { throw new Error("Backend did not return JSON:\n" + text.slice(0,400)); }
+
+    MODEL.raw = data;
+    const {deals, ranging} = normalizeShape(data);
+    MODEL.deals = Array.isArray(deals) ? deals : [];
+    MODEL.ranging = Array.isArray(ranging) ? ranging : [];
+
+    // Build store list if we have ranging; otherwise clear it
+    const stores = [...new Set(MODEL.ranging.map(r => r.Store).filter(Boolean))];
+    storeSel.innerHTML = '<option value="">-- Choose a store --</option>';
+    stores.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s; opt.textContent = s;
+      storeSel.appendChild(opt);
+    });
+
+    // Debug summary (not the whole massive JSON)
+    debug.textContent =
+      `✅ Loaded\n` +
+      `- deals: ${MODEL.deals.length}\n` +
+      `- ranging: ${MODEL.ranging.length}\n` +
+      `Keys(seen): ${Object.keys(MODEL.raw||{}).join(", ") || "(array)"}\n` +
+      `\nSample deal keys: ${MODEL.deals[0]?Object.keys(MODEL.deals[0]).join(", "):"—"}` +
+      `\nSample ranging keys: ${MODEL.ranging[0]?Object.keys(MODEL.ranging[0]).join(", "):"—"}`;
+
+    // If there is no ranging array, render products without store filter so you still see data.
+    renderForStore();
+  }catch(err){
+    debug.textContent = `Error loading: ${err}`;
+  }
+}
+
+function findDealByProductName(name){
+  if (!name) return null;
+  // Try exact match first
+  let row = MODEL.deals.find(d => (d.Product||d.product) === name);
+  if (row) return row;
+  // Try loose match (trim & collapse spaces)
+  const target = name.replace(/\s+/g,' ').trim().toLowerCase();
+  row = MODEL.deals.find(d => String(d.Product||d.product||"").replace(/\s+/g,' ').trim().toLowerCase() === target);
+  return row || null;
+}
+
+function renderForStore(){
+  const storeSel = document.getElementById("storeSelect");
+  const store = storeSel.value;
+  const wrap = document.getElementById("products");
+  wrap.innerHTML = "";
+
+  // Decide what to render:
+  let rows = [];
+  if (MODEL.ranging.length){
+    rows = store ? MODEL.ranging.filter(r => r.Store === store) : [];
+  } else {
+    // No ranging provided by backend — show master products so app still “works”
+    rows = MODEL.deals.length ? MODEL.deals : [];
+  }
+
+  if (!rows.length){
+    wrap.innerHTML = `<div class="kv">No products to display. ${MODEL.ranging.length? "Pick a store." : "Waiting for 'ranging' data from backend."}</div>`;
+    document.getElementById("dealSummary").style.display = store ? "block" : "none";
+    document.getElementById("dealTotal").textContent = "$0.00";
+    return;
+  }
+
+  // Simple deal total (sum of 50% Deal where numeric in the rendered list)
+  let total = 0;
+
+  rows.forEach(r => {
+    // If r is a ranging row, join to a deal row by Product
+    const prodName = r.Product || r.product || r["Product Name"] || "";
+    const master = MODEL.ranging.length ? (findDealByProductName(prodName) || {}) : r;
+
+    const img = master["Image URL"] || master["image url"] || "";
+    const mcode = master["Metcash Code"] || master["metcash code"] || master["Code"] || "-";
+    const sda   = master["SDA Ranking"] || master["sda ranking"] || "-";
+    const cat   = master["Category"] || master["category"] || "-";
+    const layout= master["Metcash Layout"] || master["metcash layout"] || "-";
+    const br    = master["Metcash Base Range"] || master["metcash base range"] || "-";
+    const list  = master["List Price"] || master["list price"] || "-";
+    const deal  = master["50% Deal"] || master["50% deal"] || null;
+
+    const status = r.Status || r.status || (master.Status || "");
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="img">${img ? `<img src="${img}" alt="">` : "🖼️"}</div>
+      <div class="info">
+        <div class="title">${prodName || (master.Product||"Unnamed product")}
+          ${status ? `<span class="pill ${/not\s*ranging/i.test(status)?'red':'green'}">${status}</span>`:``}
+        </div>
+        <div class="kv">Metcash Code: ${mcode}</div>
+        <div class="kv">SDA Ranking: ${sda}</div>
+        <div class="kv">Category: ${cat}</div>
+        <div class="kv">Layout: ${layout}</div>
+        <div class="kv">Base Range: ${br}</div>
+        <div class="kv">List Price: ${list}</div>
+        <div class="kv">50% Deal: ${deal ?? "-"}</div>
+      </div>
+    `;
+    wrap.appendChild(card);
+
+    const numDeal = Number(deal);
+    if (isFinite(numDeal)) total += numDeal;
+  });
+
+  const summary = document.getElementById("dealSummary");
+  summary.style.display = (store && rows.length) ? "block" : "none";
+  document.getElementById("dealTotal").textContent = fmtMoney(total);
+}
+
+// Kick off
+loadData();
+</script>
 </body>
 </html>
