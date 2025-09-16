@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Store Ranging App (Debug)</title>
+  <title>Store Ranging App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, sans-serif; }
@@ -12,74 +12,55 @@
 <body class="bg-slate-100 text-slate-800">
   <div class="h-screen flex flex-col">
     <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-      <h1 class="text-lg font-bold">Store Ranging App (Debug)</h1>
+      <h1 class="text-lg font-bold">Store Ranging App</h1>
       <button id="btn-refresh" class="px-3 py-1 bg-green-600 text-white rounded">Refresh 🔄</button>
     </header>
 
-    <!-- Debug message -->
-    <div id="debug" class="bg-yellow-50 text-yellow-800 text-sm px-4 py-2 border-b border-yellow-200 hidden"></div>
+    <!-- Deal summary -->
+    <div id="deal-box" class="hidden bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 text-sm"></div>
 
     <main class="flex-1 overflow-y-auto p-4">
-      <div id="store-select-box">
+      <div class="mb-4">
+        <label for="store-search" class="block text-sm font-medium text-slate-700 mb-1">Search store</label>
+        <input id="store-search" type="text" placeholder="Type to filter stores..."
+               class="w-full p-2 border rounded mb-2"/>
         <label for="store-select" class="block text-sm font-medium text-slate-700 mb-1">Select a store</label>
         <select id="store-select" class="w-full p-2 border rounded bg-white"></select>
       </div>
 
-      <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4"></div>
+      <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </main>
   </div>
 
   <script>
     const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
-    const RANGING_URLS = [
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RangingData",
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging Data",
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging",
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RANGING"
-    ];
+    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging";
 
     let deals = [];
     let merged = [];
+    let selectedDeals = [];
     let allStores = [];
 
+    const categoryColors = {
+      "Cheese": "bg-yellow-200 text-yellow-800",
+      "Butter": "bg-orange-200 text-orange-800",
+      "UHT": "bg-blue-200 text-blue-800",
+      "Specialty": "bg-purple-200 text-purple-800",
+      "Default": "bg-slate-200 text-slate-800"
+    };
+
     document.getElementById("btn-refresh").addEventListener("click", loadData);
+    document.getElementById("store-select").addEventListener("change", e => showStoreProducts(e.target.value));
+    document.getElementById("store-search").addEventListener("input", filterStores);
 
     async function loadData() {
       try {
-        // Load deals
         const dealsRes = await fetch(DEALS_URL);
         deals = await dealsRes.json();
 
-        // Try multiple Ranging tab names
-        let ranging = [];
-        let urlUsed = "";
-        for (let url of RANGING_URLS) {
-          try {
-            const res = await fetch(url);
-            const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-              ranging = data;
-              urlUsed = url;
-              break;
-            }
-          } catch (e) {
-            console.warn("Failed URL:", url, e);
-          }
-        }
+        const res = await fetch(RANGING_URL);
+        const ranging = await res.json();
 
-        const debugBox = document.getElementById("debug");
-        if (ranging.length === 0) {
-          debugBox.textContent = "⚠️ All tested tab names returned 0 rows.";
-          debugBox.classList.remove("hidden");
-          return;
-        } else {
-          debugBox.textContent = `✅ Loaded ${ranging.length} rows from: ${urlUsed}. First row keys: ${Object.keys(ranging[0]).join(", ")}`;
-          debugBox.classList.remove("hidden");
-        }
-
-        console.log("🔎 Ranging first row:", ranging[0]);
-
-        // Build store list (just to confirm stores show up)
         merged = [];
         ranging.forEach(row => {
           const store = row["Store"] || row["store"] || "";
@@ -89,35 +70,104 @@
             const status = row[key];
             if (!status) return;
             const productMeta = deals.find(d => d["Product"] === key);
-            merged.push({
-              Store: store,
-              Product: key,
-              Ranging: status,
-              ImageURL: productMeta?.["Image URL"] || ""
-            });
+            if (productMeta) {
+              merged.push({
+                Store: store,
+                Product: key,
+                Ranging: status,
+                ImageURL: productMeta["Image URL"] || "",
+                Category: productMeta["Category"] || "Default"
+              });
+            }
           });
         });
 
-        allStores = [...new Set(merged.map(r => r.Store))].sort();
         renderStoreDropdown();
-
       } catch (e) {
-        console.error("❌ Error loading data", e);
-        const debugBox = document.getElementById("debug");
-        debugBox.textContent = `❌ Error: ${e.message}`;
-        debugBox.classList.remove("hidden");
+        console.error("Error loading data", e);
       }
     }
 
     function renderStoreDropdown() {
       const select = document.getElementById("store-select");
       select.innerHTML = "<option value=''>-- Choose a store --</option>";
+      allStores = [...new Set(merged.map(r => r.Store))].filter(Boolean).sort();
       allStores.forEach(store => {
         const opt = document.createElement("option");
         opt.value = store;
         opt.textContent = store;
         select.appendChild(opt);
       });
+    }
+
+    function filterStores() {
+      const searchValue = document.getElementById("store-search").value.toLowerCase();
+      const select = document.getElementById("store-select");
+      select.innerHTML = "<option value=''>-- Choose a store --</option>";
+      const filtered = allStores.filter(s => s.toLowerCase().includes(searchValue));
+      filtered.forEach(store => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        select.appendChild(opt);
+      });
+    }
+
+    function categoryBadge(cat) {
+      const cls = categoryColors[cat] || categoryColors["Default"];
+      return `<span class="px-2 py-0.5 text-xs rounded ${cls}">${cat}</span>`;
+    }
+
+    function showStoreProducts(store) {
+      const grid = document.getElementById("products-grid");
+      grid.innerHTML = "";
+      if (!store) return;
+
+      const products = merged.filter(r => r.Store === store && r.Ranging.toLowerCase().includes("not"));
+      products.forEach(prod => {
+        const chosen = selectedDeals.some(d => d.Store === prod.Store && d.Product === prod.Product);
+        const card = document.createElement("div");
+        card.className = "bg-white rounded shadow p-3 flex flex-col";
+        card.innerHTML = `
+          <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
+            <img src="${prod.ImageURL}" alt="${prod.Product}" class="w-full h-full object-cover"
+                 onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
+          </div>
+          <div class="font-semibold mb-1">${prod.Product}</div>
+          ${categoryBadge(prod.Category)}
+          <button class="mt-2 px-3 py-1 rounded text-white text-sm ${chosen?'bg-green-600':'bg-blue-600'}">
+            ${chosen?'Added':'Add to Deal'}
+          </button>
+        `;
+        const btn = card.querySelector("button");
+        btn.addEventListener("click", () => toggleDeal(prod, btn));
+        grid.appendChild(card);
+      });
+      renderDealSummary();
+    }
+
+    function toggleDeal(prod, btn) {
+      const idx = selectedDeals.findIndex(d => d.Store===prod.Store && d.Product===prod.Product);
+      if (idx>=0) {
+        selectedDeals.splice(idx,1);
+        btn.textContent="Add to Deal"; btn.className="mt-2 px-3 py-1 rounded bg-blue-600 text-white";
+      } else {
+        selectedDeals.push(prod);
+        btn.textContent="Added"; btn.className="mt-2 px-3 py-1 rounded bg-green-600 text-white";
+      }
+      renderDealSummary();
+    }
+
+    function renderDealSummary() {
+      const box=document.getElementById("deal-box");
+      if (selectedDeals.length===0){box.classList.add("hidden");return;}
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <strong>${selectedDeals.length} product${selectedDeals.length>1?"s":""} in deal:</strong>
+        <ul class="list-disc list-inside mt-1">
+          ${selectedDeals.map(p=>`<li>${p.Product} ${categoryBadge(p.Category)}</li>`).join("")}
+        </ul>
+      `;
     }
 
     loadData();
