@@ -14,7 +14,6 @@
     }
     .product-info { flex: 1; margin-left: 10px; }
     .actions button { margin-left: 5px; }
-    img { width: 50px; height: 50px; object-fit: contain; }
   </style>
 </head>
 <body>
@@ -36,7 +35,7 @@
         const res = await fetch(API_URL);
         allData = await res.json();
 
-        // Normalize and extract store names
+        // Get unique store names
         const stores = [...new Set(allData.map(row => row.Store || row.store))];
 
         const select = document.getElementById("storeSelect");
@@ -51,6 +50,7 @@
         });
       } catch (err) {
         console.error("Error fetching data", err);
+        alert("Failed to load data");
       }
     }
 
@@ -61,29 +61,36 @@
 
       if (!store) return;
 
+      // Filter products for this store with Status = "Not Ranging"
       const products = allData.filter(row =>
         (row.Store || row.store) === store &&
         (row.Status || row.status) === "Not Ranging"
       );
 
+      if (products.length === 0) {
+        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
+        return;
+      }
+
       products.forEach(prod => {
-        const productName = prod.Product || prod.product || "Unnamed product";
-        const metcash = prod.MetcashCode || prod.metcashCode || "—";
+        const productName = prod.Product || prod.product || "Unnamed";
+        const status = prod.Status || prod.status || "—";
+        const metcash = prod["Metcash Code"] || prod.metcash || "—";
         const deal = prod["50% Deal"] || prod.deal || "—";
-        const image = prod["Image URL"] || prod.image || "";
+        const image = prod["Image URL"] || prod.image || "https://via.placeholder.com/50";
 
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
-          <img src="${image || 'https://via.placeholder.com/50'}" alt="Product">
           <div class="product-info">
             <strong>${productName}</strong><br>
+            Status: ${status}<br>
             Metcash Code: ${metcash}<br>
             50% Deal: $${deal}
           </div>
           <div class="actions">
             <button onclick="addToOffer('${store}','${productName}')">Add to Offer</button>
-            <button onclick="notBuying('${store}','${productName}')">Not Buying</button>
+            <button onclick="markNotBuying('${store}','${productName}')">Not Buying</button>
           </div>
         `;
         container.appendChild(card);
@@ -91,29 +98,25 @@
     }
 
     async function addToOffer(store, product) {
-      alert(`Added ${product} from ${store} to offer`);
-      // Hook this to your sheet if needed
+      alert(`${product} added to offer for ${store}`);
     }
 
-    async function notBuying(store, product) {
+    async function markNotBuying(store, product) {
       try {
         await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            Store: store,
-            Product: product,
-            Status: "Not Buying"
-          })
+          body: JSON.stringify({ Store: store, Product: product, Status: "Not Buying" })
         });
-        alert(`Marked ${product} as Not Buying for ${store}`);
-        fetchData(); // Refresh data
+        alert(`${product} marked as Not Buying for ${store}`);
+        fetchData(); // reload data after update
       } catch (err) {
-        console.error("Error sending Not Buying update", err);
+        console.error("Error updating status", err);
+        alert("Failed to update sheet");
       }
     }
 
-    // Initial load
+    // Load data at start
     fetchData();
   </script>
 </body>
