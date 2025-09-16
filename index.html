@@ -2,122 +2,112 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
+    #debug { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border: 1px solid #ccc; margin-top: 10px; }
     select, button { margin: 10px 0; padding: 8px; }
-    .product-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 12px;
-      margin: 10px 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .product-info {
-      max-width: 70%;
-    }
-    .product-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .add-btn { background-color: #007bff; color: white; }
-    .not-btn { background-color: #dc3545; color: white; }
-    #debug { margin-top: 20px; font-size: 0.9em; color: #555; }
+    .product-card { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; display: flex; align-items: center; }
+    .product-card img { width: 60px; height: 60px; margin-right: 10px; object-fit: contain; background: #f0f0f0; }
+    .product-info { flex-grow: 1; }
+    .btn { padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; }
+    .btn-offer { background: #007bff; color: white; }
+    .btn-notbuy { background: #dc3545; color: white; margin-left: 5px; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
-  <button id="refresh">Refresh</button>
+  <button id="refreshBtn">Refresh</button>
   <br>
   <label for="storeSelect">Select a store:</label>
   <select id="storeSelect">
     <option>-- Choose a store --</option>
   </select>
   <div id="products"></div>
-  <div id="debug">
-    <h2>Debug Output</h2>
-    <pre id="debugOutput">Raw JSON will appear here</pre>
-  </div>
+
+  <h2>Debug Output</h2>
+  <div id="debug">Raw JSON will appear here</div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxqByOsG2nGUR0p8qJgT4P7IRngrIh0-YP_1Xhki9PVC2cUiahJSjp0IY2bw5zF8d-62Q/exec";
-    let allData = [];
+    const PROXY_URL = "https://api.allorigins.win/get?url=";
+    const API_URL = encodeURIComponent("https://script.google.com/macros/s/AKfycbxqByOsG2nGUR0p8qJgT4P7IRngrIh0-YP_1Xhki9PVC2cUiahJSjp0IY2bw5zF8d-62Q/exec");
 
-    async function fetchData() {
+    let globalData = [];
+
+    async function loadData() {
+      const debugDiv = document.getElementById("debug");
+      debugDiv.innerText = "Loading...";
+
       try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        allData = data;
-        document.getElementById('debugOutput').textContent = JSON.stringify(data, null, 2);
-        populateStores(data);
+        const response = await fetch(PROXY_URL + API_URL);
+        const data = await response.json();
+        const parsed = JSON.parse(data.contents);
+
+        globalData = parsed;
+        debugDiv.innerText = JSON.stringify(parsed, null, 2);
+
+        populateStores(parsed);
       } catch (err) {
-        document.getElementById('debugOutput').textContent = "Error: " + err;
+        debugDiv.innerText = "Error: " + err;
       }
     }
 
     function populateStores(data) {
-      const storeSelect = document.getElementById('storeSelect');
-      storeSelect.innerHTML = '<option>-- Choose a store --</option>';
-      const stores = [...new Set(data.map(row => row.Store))];
+      const storeSelect = document.getElementById("storeSelect");
+      storeSelect.innerHTML = "<option>-- Choose a store --</option>";
+
+      const stores = [...new Set(data.slice(1).map(row => row[0]))]; // Unique store names
       stores.forEach(store => {
-        const opt = document.createElement('option');
-        opt.value = store;
-        opt.textContent = store;
-        storeSelect.appendChild(opt);
+        const option = document.createElement("option");
+        option.value = store;
+        option.textContent = store;
+        storeSelect.appendChild(option);
       });
+
+      storeSelect.onchange = () => showProducts(storeSelect.value);
     }
 
-    function showProducts(store) {
-      const container = document.getElementById('products');
-      container.innerHTML = '';
-      const products = allData.filter(row => row.Store === store && row.Status === "Not Ranging");
-      products.forEach(product => {
-        const card = document.createElement('div');
-        card.className = 'product-card';
+    function showProducts(storeName) {
+      const productsDiv = document.getElementById("products");
+      productsDiv.innerHTML = "";
 
-        const info = document.createElement('div');
-        info.className = 'product-info';
-        info.innerHTML = `
-          <strong>${product.Product}</strong><br>
-          Metcash Code: ${product.MetcashCode || "—"}<br>
-          50% Deal: $${product.Deal || "—"}
-        `;
+      const rows = globalData.filter(row => row[0] === storeName);
 
-        const actions = document.createElement('div');
-        actions.className = 'product-actions';
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-btn';
-        addBtn.textContent = 'Add to Offer';
-        const notBtn = document.createElement('button');
-        notBtn.className = 'not-btn';
-        notBtn.textContent = 'Not Buying';
-        actions.appendChild(addBtn);
-        actions.appendChild(notBtn);
+      rows.forEach(row => {
+        const [store, product, status] = row;
 
+        const card = document.createElement("div");
+        card.className = "product-card";
+
+        const img = document.createElement("img");
+        img.src = row[3] || ""; // Image URL if available
+        img.alt = "No Image";
+
+        const info = document.createElement("div");
+        info.className = "product-info";
+        info.innerHTML = `<strong>${product}</strong><br>Status: ${status || "Unknown"}`;
+
+        const addBtn = document.createElement("button");
+        addBtn.className = "btn btn-offer";
+        addBtn.textContent = "Add to Offer";
+
+        const notBuyBtn = document.createElement("button");
+        notBuyBtn.className = "btn btn-notbuy";
+        notBuyBtn.textContent = "Not Buying";
+
+        card.appendChild(img);
         card.appendChild(info);
-        card.appendChild(actions);
-        container.appendChild(card);
+        card.appendChild(addBtn);
+        card.appendChild(notBuyBtn);
+
+        productsDiv.appendChild(card);
       });
     }
 
-    document.getElementById('storeSelect').addEventListener('change', e => {
-      if (e.target.value !== "-- Choose a store --") {
-        showProducts(e.target.value);
-      }
-    });
-    document.getElementById('refresh').addEventListener('click', fetchData);
-
-    fetchData();
+    document.getElementById("refreshBtn").addEventListener("click", loadData);
+    window.onload = loadData;
   </script>
 </body>
 </html>
