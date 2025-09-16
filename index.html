@@ -42,10 +42,12 @@
 
   <script>
     const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
-    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging";
+    const RANGING_URLS = [
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging",
+      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RANGING"
+    ];
 
     let deals = [];
-    let ranging = [];
     let merged = [];
     let selectedDeals = [];
     let allStores = [];
@@ -64,15 +66,29 @@
 
     async function loadData() {
       try {
-        const [dealsRes, rangingRes] = await Promise.all([fetch(DEALS_URL), fetch(RANGING_URL)]);
+        const dealsRes = await fetch(DEALS_URL);
         deals = await dealsRes.json();
-        ranging = await rangingRes.json();
+
+        // Try each Ranging endpoint until we get data
+        let ranging = [];
+        for (let url of RANGING_URLS) {
+          try {
+            const res = await fetch(url);
+            if (res.ok) {
+              const data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                ranging = data;
+                break;
+              }
+            }
+          } catch { /* try next */ }
+        }
 
         merged = [];
         ranging.forEach(row => {
-          const store = row["Store"];
+          const store = row["Store"] || row["store"] || "";
           Object.keys(row).forEach(key => {
-            if (["Store ID","Store","Banner","MSO"].includes(key)) return;
+            if (["Store ID","Store","store","Banner","MSO"].includes(key)) return;
             const status = row[key];
             if (!status) return;
             const productMeta = deals.find(d => d["Product"] === key);
@@ -97,7 +113,7 @@
     function renderStoreDropdown() {
       const select = document.getElementById("store-select");
       select.innerHTML = "<option value=''>-- Choose a store --</option>";
-      allStores = [...new Set(merged.map(r => r.Store))].sort();
+      allStores = [...new Set(merged.map(r => r.Store))].filter(Boolean).sort();
       allStores.forEach(store => {
         const opt = document.createElement("option");
         opt.value = store;
