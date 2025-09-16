@@ -1,223 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Store Ranging & Deals App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Store Ranging & Deals</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .hidden { display: none; }
-    .status-bar { height: 8px; border-radius: 4px; margin-top: 4px; }
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .loader { border: 4px solid #e5e7eb; border-top: 4px solid #3b82f6; border-radius: 9999px; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    .status-bar { height: 8px; border-radius: 4px; margin-top: 6px; }
+    .btn { @apply px-3 py-1 rounded-md text-white text-sm; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
-
   <div class="h-screen flex flex-col">
-    <main class="w-full flex-grow flex flex-col bg-slate-50">
-      <header class="p-4 border-b border-slate-200 bg-white flex justify-between items-center">
-        <h2 class="text-xl font-bold">Store Ranging App</h2>
-        <div class="space-x-2">
-          <button id="dashboard-btn" class="px-3 py-1 bg-gray-600 text-white rounded-md text-sm">Dashboard 📊</button>
-          <button id="store-btn" class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">Stores 🏬</button>
-          <button id="refresh-btn" class="px-3 py-1 bg-green-600 text-white rounded-md text-sm">Refresh 🔄</button>
-        </div>
-      </header>
-
-      <div class="flex-grow p-4 overflow-y-auto">
-        <!-- Dashboard -->
-        <div id="dashboard-view">
-          <div id="dashboard-loader" class="text-center p-8 flex flex-col items-center justify-center">
-            <div class="loader mx-auto"></div>
-            <p class="mt-2 text-slate-500">Loading data...</p>
-          </div>
-          <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden"></div>
-        </div>
-
-        <!-- Store View -->
-        <div id="store-view" class="hidden">
-          <div id="deal-summary" class="mb-4 p-4 bg-blue-100 border border-blue-200 rounded-lg hidden">
-            <h3 class="font-bold text-lg text-blue-800">Total Deal Offer Summary</h3>
-            <p class="text-sm text-blue-600">Based on selected products</p>
-            <p id="deal-total" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p>
-            <ul id="deal-list" class="mt-2 text-sm list-disc list-inside text-slate-700 space-y-1"></ul>
-          </div>
-
-          <h3 class="font-bold text-lg mb-2">Stores</h3>
-          <ul id="store-list" class="space-y-2"></ul>
-
-          <div id="products-section" class="mt-6 hidden">
-            <h3 id="products-title" class="font-bold text-lg mb-2"></h3>
-            <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-          </div>
-        </div>
+    <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <h1 class="text-2xl font-bold leading-tight">Store Ranging App</h1>
+      <div class="flex gap-2">
+        <button id="btn-dashboard" class="btn bg-slate-600 hover:bg-slate-700">Dashboard 📊</button>
+        <button id="btn-stores" class="btn bg-blue-600 hover:bg-blue-700">Stores 🏬</button>
+        <button id="btn-refresh" class="btn bg-green-600 hover:bg-green-700">Refresh 🔄</button>
       </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard">
+        <!-- Summary bar -->
+        <div id="dash-summary" class="mb-4 hidden">
+          <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="font-bold text-lg">Overall Status</h2>
+              <span id="dash-total" class="text-slate-500 text-sm"></span>
+            </div>
+            <!-- stacked bar with counts -->
+            <div class="w-full h-6 bg-slate-200 rounded overflow-hidden relative">
+              <div id="bar-ranging" class="h-full bg-green-500 absolute left-0 top-0"></div>
+              <div id="bar-not" class="h-full bg-red-500 absolute right-0 top-0"></div>
+              <div class="absolute inset-0 flex items-center justify-between px-2 text-xs font-semibold text-white mix-blend-difference">
+                <span id="count-ranging">0</span>
+                <span id="count-not">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loader -->
+        <div id="dash-loader" class="text-center p-10">
+          <div class="loader mx-auto"></div>
+          <p class="mt-2 text-slate-500">Loading data…</p>
+        </div>
+
+        <!-- Product grid -->
+        <div id="dash-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+      </section>
+
+      <!-- STORES -->
+      <section id="view-stores" class="hidden">
+        <!-- Deal summary -->
+        <div id="deal-box" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 class="font-bold text-blue-900 text-lg">Deal Summary</h3>
+          <p id="deal-total" class="text-blue-900 font-bold text-2xl mt-1">0 products</p>
+          <ul id="deal-list" class="mt-2 text-sm list-disc list-inside space-y-1"></ul>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Store list -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow">
+              <div class="p-3 border-b border-slate-200">
+                <h3 class="font-bold">Stores</h3>
+              </div>
+              <ul id="store-list" class="max-h-[60vh] overflow-y-auto divide-y divide-slate-100"></ul>
+            </div>
+          </div>
+
+          <!-- Products for selected store -->
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow">
+              <div class="p-3 border-b border-slate-200">
+                <h3 id="store-title" class="font-bold">Select a store</h3>
+                <p class="text-slate-500 text-sm">Showing <span class="font-semibold">Not Ranging</span> products only</p>
+              </div>
+              <div id="store-products" class="p-3 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
   <script>
-    const dataUrl = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241";
+    // ==== CONFIG ====
+    const DATA_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241";
+    const CACHE_KEY = "rangingData_v1";
+    const CACHE_MS = 5 * 60 * 1000; // 5 minutes
 
-    let rangingData = [];
-    let selectedDeals = [];
+    // ==== STATE ====
+    let rows = [];           // all rows from sheet
+    let selectedDeals = [];  // products selected in store view
+    let currentStore = null;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      loadData();
+    // ==== HELPERS ====
+    const by = (id) => document.getElementById(id);
+    const safe = (v) => (v === null || v === undefined ? "" : String(v));
 
-      document.getElementById("refresh-btn").addEventListener("click", loadData);
-      document.getElementById("dashboard-btn").addEventListener("click", () => {
-        showDashboard();
+    function groupByStore(data) {
+      const map = new Map();
+      data.forEach(r => {
+        const store = safe(r["Store"]).trim();
+        if (!store) return;
+        if (!map.has(store)) map.set(store, []);
+        map.get(store).push(r);
       });
-      document.getElementById("store-btn").addEventListener("click", () => {
-        showStores();
-      });
-    });
+      return map;
+    }
 
-    async function loadData() {
+    // Simple cache: show cached immediately, refresh in background
+    async function getData() {
       try {
-        document.getElementById("dashboard-loader").style.display = "block";
-        document.getElementById("dashboard-grid").classList.add("hidden");
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+        const now = Date.now();
 
-        const res = await fetch(dataUrl);
-        if (!res.ok) throw new Error("HTTP error " + res.status);
-        const data = await res.json();
-        rangingData = data;
-
-        renderDashboard(data);
-        renderStores(data);
-      } catch (err) {
-        console.error("Failed to load data", err);
-        document.getElementById("dashboard-grid").innerHTML = "<p class='text-red-500'>⚠️ Error loading data</p>";
-        document.getElementById("dashboard-grid").classList.remove("hidden");
-      } finally {
-        document.getElementById("dashboard-loader").style.display = "none";
+        if (cached && (now - cached.timestamp) < CACHE_MS && Array.isArray(cached.data)) {
+          rows = cached.data;
+          renderAll();
+          // background refresh without blocking UI
+          fetchAndRender(true);
+        } else {
+          await fetchAndRender(false);
+        }
+      } catch {
+        await fetchAndRender(false);
       }
     }
 
-    // --- Dashboard ---
-    function renderDashboard(data) {
-      const grid = document.getElementById("dashboard-grid");
+    async function fetchAndRender(background) {
+      if (!background) by("dash-loader").classList.remove("hidden");
+      try {
+        const res = await fetch(DATA_URL, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+
+        // Normalise keys we use
+        rows = (Array.isArray(data) ? data : []).map(r => ({
+          Store: safe(r["Store"]),
+          Product: safe(r["Product"]),
+          Ranging: safe(r["Ranging"]),
+          ImageURL: safe(r["Image URL"])
+        }));
+
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: rows }));
+        renderAll();
+      } catch (e) {
+        console.error(e);
+        by("dash-grid").innerHTML = `<p class="text-red-600">⚠️ Error loading data</p>`;
+        by("dash-grid").classList.remove("hidden");
+      } finally {
+        by("dash-loader").classList.add("hidden");
+      }
+    }
+
+    // ==== DASHBOARD RENDER ====
+    function renderDashboard() {
+      // counts
+      const total = rows.length;
+      const ranging = rows.filter(r => r.Ranging.toLowerCase() === "ranging").length;
+      const notRanging = total - ranging;
+
+      // summary bar
+      const rangingPct = total ? (ranging / total) * 100 : 0;
+      const notPct = 100 - rangingPct;
+
+      by("dash-summary").classList.remove("hidden");
+      by("dash-total").textContent = `${total} products`;
+      by("count-ranging").textContent = ranging;
+      by("count-not").textContent = notRanging;
+
+      const barR = by("bar-ranging");
+      const barN = by("bar-not");
+      barR.style.width = `${rangingPct}%`;
+      barN.style.width = `${notPct}%`;
+
+      // product grid
+      const grid = by("dash-grid");
       grid.innerHTML = "";
-
-      data.forEach(item => {
+      rows.forEach(item => {
+        const statusGreen = item.Ranging.toLowerCase() === "ranging";
         const card = document.createElement("div");
-        card.className = "p-4 bg-white shadow rounded flex flex-col";
-
+        card.className = "bg-white rounded-lg shadow p-3 flex flex-col";
         card.innerHTML = `
-          <img src="${item["Image URL"] || ''}" alt="${item.Product}" class="w-full h-40 object-cover rounded mb-2">
-          <h3 class="font-bold text-md">${item.Product}</h3>
-          <div class="status-bar ${item.Ranging.toLowerCase() === "ranging" ? "bg-green-500" : "bg-red-500"}"></div>
-          <p class="text-sm mt-1">${item.Ranging}</p>
+          <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
+            <img src="${item.ImageURL}" alt="${item.Product}"
+                 class="w-full h-full object-cover"
+                 onerror="this.src=''; this.parentElement.classList.add('bg-slate-200');">
+          </div>
+          <div class="font-semibold text-sm">${item.Product}</div>
+          <div class="status-bar ${statusGreen ? 'bg-green-500' : 'bg-red-500'}"></div>
+          <div class="text-xs text-slate-500 mt-1">${item.Ranging || 'Unknown'}</div>
         `;
-
         grid.appendChild(card);
       });
-
       grid.classList.remove("hidden");
     }
 
-    // --- Stores ---
-    function renderStores(data) {
-      const storeList = document.getElementById("store-list");
-      storeList.innerHTML = "";
+    // ==== STORE VIEW RENDER ====
+    function renderStoreList() {
+      const list = by("store-list");
+      list.innerHTML = "";
+      const map = groupByStore(rows);
+      const stores = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
 
-      const stores = [...new Set(data.map(r => r.Store))];
       stores.forEach(store => {
         const li = document.createElement("li");
-        li.className = "p-3 bg-white shadow rounded cursor-pointer hover:bg-slate-100";
-        li.textContent = store;
-        li.addEventListener("click", () => showStoreProducts(store));
-        storeList.appendChild(li);
+        li.className = "p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between";
+        const notCount = map.get(store).filter(r => r.Ranging.toLowerCase() === "not ranging").length;
+        li.innerHTML = `
+          <span class="font-medium">${store}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${notCount ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
+            ${notCount} not ranging
+          </span>
+        `;
+        li.addEventListener("click", () => showStore(store));
+        list.appendChild(li);
       });
     }
 
-    function showStoreProducts(store) {
-      const section = document.getElementById("products-section");
-      const title = document.getElementById("products-title");
-      const grid = document.getElementById("products-grid");
-
-      title.textContent = `Not Ranging Products for ${store}`;
+    function showStore(store) {
+      currentStore = store;
+      by("store-title").textContent = store ? `Not Ranging — ${store}` : "Select a store";
+      const grid = by("store-products");
       grid.innerHTML = "";
 
-      const products = rangingData.filter(r => r.Store === store && r.Ranging.toLowerCase() === "not ranging");
+      const items = rows.filter(r =>
+        r.Store === store && r.Ranging.toLowerCase() === "not ranging"
+      );
 
-      products.forEach(prod => {
+      items.forEach(prod => {
+        const chosen = selectedDeals.some(d => d.Store === prod.Store && d.Product === prod.Product);
         const card = document.createElement("div");
-        card.className = "p-4 bg-white shadow rounded flex flex-col";
-
-        const isSelected = selectedDeals.find(d => d.Product === prod.Product);
-
+        card.className = "bg-white rounded-lg shadow p-3 flex flex-col";
         card.innerHTML = `
-          <img src="${prod["Image URL"] || ''}" alt="${prod.Product}" class="w-full h-40 object-cover rounded mb-2">
-          <h3 class="font-bold text-md">${prod.Product}</h3>
-          <button class="deal-btn mt-2 px-3 py-1 rounded ${isSelected ? "bg-green-600 text-white" : "bg-blue-600 text-white"}">
-            ${isSelected ? "Added" : "Add to Deal"}
+          <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
+            <img src="${prod.ImageURL}" alt="${prod.Product}"
+                 class="w-full h-full object-cover"
+                 onerror="this.src=''; this.parentElement.classList.add('bg-slate-200');">
+          </div>
+          <div class="font-semibold">${prod.Product}</div>
+          <button class="mt-3 px-3 py-1 rounded-md text-white text-sm ${chosen ? 'bg-green-600' : 'bg-blue-600'}">
+            ${chosen ? 'Added' : 'Add to Deal'}
           </button>
         `;
-
-        const btn = card.querySelector(".deal-btn");
+        const btn = card.querySelector("button");
         btn.addEventListener("click", () => toggleDeal(prod, btn));
-
         grid.appendChild(card);
       });
-
-      section.classList.remove("hidden");
-      updateDealSummary();
     }
 
-    // --- Deal Summary ---
-    function toggleDeal(product, btn) {
-      const index = selectedDeals.findIndex(d => d.Product === product.Product);
-      if (index >= 0) {
-        selectedDeals.splice(index, 1);
+    function toggleDeal(prod, btn) {
+      const idx = selectedDeals.findIndex(d => d.Store === prod.Store && d.Product === prod.Product);
+      if (idx >= 0) {
+        selectedDeals.splice(idx, 1);
         btn.textContent = "Add to Deal";
-        btn.className = "deal-btn mt-2 px-3 py-1 rounded bg-blue-600 text-white";
+        btn.className = "mt-3 px-3 py-1 rounded-md text-white text-sm bg-blue-600";
       } else {
-        selectedDeals.push(product);
+        selectedDeals.push(prod);
         btn.textContent = "Added";
-        btn.className = "deal-btn mt-2 px-3 py-1 rounded bg-green-600 text-white";
+        btn.className = "mt-3 px-3 py-1 rounded-md text-white text-sm bg-green-600";
       }
-      updateDealSummary();
+      renderDealSummary();
     }
 
-    function updateDealSummary() {
-      const box = document.getElementById("deal-summary");
-      const totalEl = document.getElementById("deal-total");
-      const listEl = document.getElementById("deal-list");
+    function renderDealSummary() {
+      const box = by("deal-box");
+      const total = by("deal-total");
+      const list = by("deal-list");
 
       if (selectedDeals.length === 0) {
         box.classList.add("hidden");
+        list.innerHTML = "";
+        total.textContent = "0 products";
         return;
       }
 
       box.classList.remove("hidden");
-      listEl.innerHTML = "";
-
-      // For now, we’ll just count items (no price column in sheet?)
-      let total = selectedDeals.length;
-
-      totalEl.textContent = `${total} Products`;
-
-      selectedDeals.forEach(prod => {
+      total.textContent = `${selectedDeals.length} product${selectedDeals.length > 1 ? 's' : ''}`;
+      list.innerHTML = "";
+      selectedDeals.forEach(p => {
         const li = document.createElement("li");
-        li.textContent = prod.Product;
-        listEl.appendChild(li);
+        li.textContent = `${p.Product}`;
+        list.appendChild(li);
       });
     }
 
-    // --- View Switchers ---
+    // ==== VIEW SWITCH & MASTER RENDER ====
     function showDashboard() {
-      document.getElementById("dashboard-view").classList.remove("hidden");
-      document.getElementById("store-view").classList.add("hidden");
+      by("view-dashboard").classList.remove("hidden");
+      by("view-stores").classList.add("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function showStores() {
+      by("view-dashboard").classList.add("hidden");
+      by("view-stores").classList.remove("hidden");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function showStores() {
-      document.getElementById("dashboard-view").classList.add("hidden");
-      document.getElementById("store-view").classList.remove("hidden");
+    function renderAll() {
+      renderDashboard();
+      renderStoreList();
+      renderDealSummary();
     }
+
+    // ==== EVENTS ====
+    document.getElementById("btn-dashboard").addEventListener("click", showDashboard);
+    document.getElementById("btn-stores").addEventListener("click", showStores);
+    document.getElementById("btn-refresh").addEventListener("click", () => fetchAndRender(false));
+
+    // ==== START ====
+    getData();
   </script>
 </body>
 </html>
