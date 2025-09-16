@@ -3,61 +3,40 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Store Ranging & Deals App</title>
+  <title>Store Ranging App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: system-ui, sans-serif; }
-    .loader { border: 4px solid #eee; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    .loader { border: 4px solid #eee; border-top: 4px solid #2563eb; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg) } }
-    .status-bar { height: 6px; border-radius: 4px; margin-top: 4px; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
   <div class="h-screen flex flex-col">
     <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-      <h1 class="text-xl font-bold">Store Ranging App</h1>
-      <div class="flex gap-2">
-        <button id="btn-dashboard" class="px-3 py-1 bg-slate-600 text-white rounded">Dashboard 📊</button>
-        <button id="btn-stores" class="px-3 py-1 bg-blue-600 text-white rounded">Stores 🏬</button>
-        <button id="btn-refresh" class="px-3 py-1 bg-green-600 text-white rounded">Refresh 🔄</button>
-      </div>
+      <h1 class="text-lg font-bold">Store Ranging App</h1>
+      <button id="btn-refresh" class="px-3 py-1 bg-green-600 text-white rounded">Refresh 🔄</button>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
-      <!-- Dashboard -->
-      <section id="view-dashboard">
-        <div id="dash-loader" class="text-center p-10">
-          <div class="loader mx-auto"></div>
-          <p class="mt-2 text-slate-500">Loading data…</p>
-        </div>
-        <div id="dash-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
-      </section>
+      <!-- Deal summary -->
+      <div id="deal-box" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 class="font-bold text-blue-900 text-lg">Deal Summary</h3>
+        <p id="deal-total" class="text-blue-900 font-bold text-xl mt-1">0 products</p>
+        <ul id="deal-list" class="mt-2 text-sm list-disc list-inside space-y-1"></ul>
+      </div>
 
-      <!-- Stores -->
-      <section id="view-stores" class="hidden">
-        <div id="deal-box" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 class="font-bold text-blue-900 text-lg">Deal Summary</h3>
-          <p id="deal-total" class="text-blue-900 font-bold text-2xl mt-1">0 products</p>
-          <ul id="deal-list" class="mt-2 text-sm list-disc list-inside space-y-1"></ul>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow">
-              <div class="p-3 border-b border-slate-200 font-bold">Stores</div>
-              <ul id="store-list" class="max-h-[60vh] overflow-y-auto divide-y divide-slate-100"></ul>
-            </div>
-          </div>
-          <div class="lg:col-span-2">
-            <div class="bg-white rounded-lg shadow">
-              <div class="p-3 border-b border-slate-200">
-                <h3 id="store-title" class="font-bold">Select a store</h3>
-                <p class="text-slate-500 text-sm">Showing <span class="font-semibold">Not Ranging</span> products</p>
-              </div>
-              <div id="store-products" class="p-3 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- Store search + selector -->
+      <div class="mb-4">
+        <label for="store-search" class="block text-sm font-medium text-slate-700 mb-1">Search store</label>
+        <input id="store-search" type="text" placeholder="Type to filter stores..."
+               class="w-full p-2 border rounded mb-2"/>
+        <label for="store-select" class="block text-sm font-medium text-slate-700 mb-1">Select a store</label>
+        <select id="store-select" class="w-full p-2 border rounded bg-white"></select>
+      </div>
+
+      <!-- Products -->
+      <div id="products-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
     </main>
   </div>
 
@@ -69,8 +48,8 @@
     let ranging = [];
     let merged = [];
     let selectedDeals = [];
+    let allStores = [];
 
-    // Category → Tailwind colour map
     const categoryColors = {
       "Cheese": "bg-yellow-200 text-yellow-800",
       "Butter": "bg-orange-200 text-orange-800",
@@ -79,27 +58,16 @@
       "Default": "bg-slate-200 text-slate-800"
     };
 
-    document.getElementById("btn-dashboard").addEventListener("click", () => show("dashboard"));
-    document.getElementById("btn-stores").addEventListener("click", () => show("stores"));
     document.getElementById("btn-refresh").addEventListener("click", loadData);
-
-    function show(view) {
-      document.getElementById("view-dashboard").classList.toggle("hidden", view !== "dashboard");
-      document.getElementById("view-stores").classList.toggle("hidden", view !== "stores");
-    }
+    document.getElementById("store-select").addEventListener("change", e => showStoreProducts(e.target.value));
+    document.getElementById("store-search").addEventListener("input", filterStores);
 
     async function loadData() {
-      document.getElementById("dash-loader").classList.remove("hidden");
-      document.getElementById("dash-grid").classList.add("hidden");
       try {
-        const [dealsRes, rangingRes] = await Promise.all([
-          fetch(DEALS_URL),
-          fetch(RANGING_URL)
-        ]);
+        const [dealsRes, rangingRes] = await Promise.all([fetch(DEALS_URL), fetch(RANGING_URL)]);
         deals = await dealsRes.json();
         ranging = await rangingRes.json();
 
-        // Pivot Ranging into (Store, Product, Ranging) rows
         merged = [];
         ranging.forEach(row => {
           const store = row["Store"];
@@ -120,15 +88,35 @@
           });
         });
 
-        renderDashboard();
-        renderStores();
+        renderStoreDropdown();
       } catch (e) {
-        console.error(e);
-        document.getElementById("dash-grid").innerHTML = "<p class='text-red-600'>⚠️ Error loading data</p>";
-        document.getElementById("dash-grid").classList.remove("hidden");
-      } finally {
-        document.getElementById("dash-loader").classList.add("hidden");
+        console.error("Error loading data", e);
       }
+    }
+
+    function renderStoreDropdown() {
+      const select = document.getElementById("store-select");
+      select.innerHTML = "<option value=''>-- Choose a store --</option>";
+      allStores = [...new Set(merged.map(r => r.Store))].sort();
+      allStores.forEach(store => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        select.appendChild(opt);
+      });
+    }
+
+    function filterStores() {
+      const searchValue = document.getElementById("store-search").value.toLowerCase();
+      const select = document.getElementById("store-select");
+      select.innerHTML = "<option value=''>-- Choose a store --</option>";
+      const filtered = allStores.filter(s => s.toLowerCase().includes(searchValue));
+      filtered.forEach(store => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        select.appendChild(opt);
+      });
     }
 
     function categoryBadge(cat) {
@@ -136,46 +124,11 @@
       return `<span class="px-2 py-0.5 text-xs rounded ${cls}">${cat}</span>`;
     }
 
-    function renderDashboard() {
-      const grid = document.getElementById("dash-grid");
-      grid.innerHTML = "";
-      merged.forEach(item => {
-        const green = item.Ranging.toLowerCase().includes("ranging") && !item.Ranging.toLowerCase().includes("not");
-        const card = document.createElement("div");
-        card.className = "bg-white rounded shadow p-3 flex flex-col";
-        card.innerHTML = `
-          <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
-            <img src="${item.ImageURL}" alt="${item.Product}" class="w-full h-full object-cover"
-                 onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
-          </div>
-          <div class="font-semibold text-sm mb-1">${item.Product}</div>
-          ${categoryBadge(item.Category)}
-          <div class="status-bar ${green ? 'bg-green-500' : 'bg-red-500'}"></div>
-          <div class="text-xs text-slate-500 mt-1">${item.Ranging}</div>
-        `;
-        grid.appendChild(card);
-      });
-      grid.classList.remove("hidden");
-    }
-
-    function renderStores() {
-      const list = document.getElementById("store-list");
-      list.innerHTML = "";
-      const stores = [...new Set(merged.map(r => r.Store))].sort();
-      stores.forEach(store => {
-        const notCount = merged.filter(r => r.Store === store && r.Ranging.toLowerCase().includes("not")).length;
-        const li = document.createElement("li");
-        li.className = "p-3 hover:bg-slate-50 cursor-pointer flex justify-between";
-        li.innerHTML = `<span>${store}</span><span class="text-xs ${notCount?'text-red-600':'text-green-600'}">${notCount} not ranging</span>`;
-        li.addEventListener("click", () => showStoreProducts(store));
-        list.appendChild(li);
-      });
-    }
-
     function showStoreProducts(store) {
-      document.getElementById("store-title").textContent = `Not Ranging — ${store}`;
-      const grid = document.getElementById("store-products");
+      const grid = document.getElementById("products-grid");
       grid.innerHTML = "";
+      if (!store) return;
+
       const products = merged.filter(r => r.Store === store && r.Ranging.toLowerCase().includes("not"));
       products.forEach(prod => {
         const chosen = selectedDeals.some(d => d.Store === prod.Store && d.Product === prod.Product);
@@ -197,7 +150,6 @@
         grid.appendChild(card);
       });
       renderDealSummary();
-      show("stores");
     }
 
     function toggleDeal(prod, btn) {
