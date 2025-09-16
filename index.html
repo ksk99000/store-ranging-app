@@ -45,10 +45,7 @@
 
   <script>
     const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
-    const RANGING_URLS = [
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging",
-      "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RANGING"
-    ];
+    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/RangingData";
 
     let deals = [];
     let merged = [];
@@ -69,25 +66,13 @@
 
     async function loadData() {
       try {
+        // Load deals (product list + images)
         const dealsRes = await fetch(DEALS_URL);
         deals = await dealsRes.json();
 
-        // Try each Ranging endpoint until we get data
-        let ranging = [];
-        let sourceUsed = "";
-        for (let url of RANGING_URLS) {
-          try {
-            const res = await fetch(url);
-            if (res.ok) {
-              const data = await res.json();
-              if (Array.isArray(data) && data.length > 0) {
-                ranging = data;
-                sourceUsed = url;
-                break;
-              }
-            }
-          } catch { /* try next */ }
-        }
+        // Load ranging (store vs product matrix)
+        const res = await fetch(RANGING_URL);
+        const ranging = await res.json();
 
         merged = [];
         ranging.forEach(row => {
@@ -113,7 +98,7 @@
 
         // Show debug info
         const debugBox = document.getElementById("debug");
-        debugBox.textContent = `Loaded ${allStores.length} stores from: ${sourceUsed}`;
+        debugBox.textContent = `Loaded ${allStores.length} stores from: ${RANGING_URL}`;
         debugBox.classList.remove("hidden");
 
       } catch (e) {
@@ -207,4 +192,4 @@
     loadData();
   </script>
 </body>
-</html> 
+</html>
