@@ -2,41 +2,144 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App</title>
+  <title>Store Ranging App - iOS 26 Theme</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    h1 { font-size: 24px; }
-    select, button { padding: 8px; margin: 5px 0; }
-    .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; display: none; }
-    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor:pointer; }
-    .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
-    .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
-    .buttons { margin-left: auto; }
-    .add { background: blue; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
-    .add.added { background: green; }
-    .not { background: red; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-    .restore { background: orange; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-    .details { display: none; flex-direction: column; margin-top: 10px; }
-    #products { margin-top: 20px; }
-    #offerList { margin-top: 10px; padding-left: 20px; }
-    #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
-    .toggle-group { margin: 10px 0; display: none; }
-    .toggle-btn { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 4px; margin-right: 5px; }
-    .toggle-btn.active { background: #007bff; color: white; }
-    #viewToggleSwitch { margin-left: 10px; background:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; }
-    /* Modal */
-    #storeModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; }
-    #storeModalContent { background:#fff; padding:20px; border-radius:8px; max-width:500px; max-height:80%; overflow:auto; }
-    #storeModal h3 { margin-top:0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Arial, sans-serif; 
+      padding: 20px; 
+      background: linear-gradient(135deg, #fdfdfd, #f5f9ff);
+      color: #1c1c1e;
+    }
+    h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color:#007aff; }
+    button, select {
+      padding: 10px 14px;
+      margin: 6px 4px 6px 0;
+      border-radius: 12px;
+      border: none;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button { background: #007aff; color: white; }
+    button:hover { background: #0063cc; }
+    select { background: white; border: 1px solid #ccc; }
+
+    /* Cards */
+    .card {
+      border-radius: 16px;
+      margin: 10px 0;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      backdrop-filter: blur(20px);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+    }
+    .card img {
+      width: 70px; height: 70px;
+      object-fit: contain; margin-right: 12px;
+      border-radius: 12px;
+      background: #f2f2f7;
+    }
+
+    /* Buttons inside cards */
+    .add { background: #007aff; }
+    .add.added { background: #34c759; } /* iOS green */
+    .not { background: #ff3b30; }       /* iOS red */
+    .restore { background: #ff9500; }   /* iOS orange */
+
+    /* Summary box */
+    .summary {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+      margin: 15px 0;
+      display: none;
+      border-left: 5px solid #007aff;
+    }
+
+    /* Toggle group like iOS segmented control */
+    .toggle-group {
+      display: flex;
+      background: #e5e5ea;
+      border-radius: 10px;
+      padding: 2px;
+      width: fit-content;
+      margin: 10px 0;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #007aff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      background: white;
+      color: #007aff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Modal sheet */
+    #storeModal {
+      display:none;
+      position:fixed; top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(0,0,0,0.35);
+      display:flex; align-items:flex-end; justify-content:center;
+    }
+    #storeModalContent {
+      background:#fff;
+      width:100%;
+      max-height:60%;
+      border-top-left-radius:20px;
+      border-top-right-radius:20px;
+      padding:20px;
+      overflow:auto;
+      animation: slideUp 0.3s ease;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    /* Debug box */
+    #debug {
+      background:#fff;
+      border-radius:12px;
+      padding:12px;
+      font-size:12px;
+      margin-top:20px;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+      white-space: pre-wrap;
+    }
+
+    /* Pill graph colors */
+    .pill-red { background:#ff3b30; }
+    .pill-orange { background:#ff9500; }
+    .pill-green { background:#34c759; }
   </style>
 </head>
 <body>
 
-  <h1>Store Ranging App</h1>
-  <button onclick="loadData()">Refresh</button>
-  <button id="viewToggleSwitch" onclick="toggleView()">Switch to Store View</button>
+  <h1>📱 Store Ranging App</h1>
+  <button onclick="loadData()">🔄 Refresh</button>
+  <button id="viewToggleSwitch" onclick="toggleView()">📊 Switch to Store View</button>
 
   <!-- Store controls -->
   <div id="storeControls" style="display:none;">
@@ -46,8 +149,8 @@
     </select>
 
     <div class="toggle-group" id="viewToggle">
-      <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">Not Ranging</button>
-      <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">Ranging</button>
+      <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">🔴 Not Ranging</button>
+      <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">🟢 Ranging</button>
     </div>
 
     <div id="summary" class="summary">
@@ -60,25 +163,25 @@
 
   <!-- Dashboard -->
   <div id="dashboard" style="display:none; margin-top:20px;">
-    <h2>Product Dashboard</h2>
+    <h2 style="color:#007aff;">📊 Product Dashboard</h2>
     <div id="dashboardContent"></div>
   </div>
 
   <!-- Modal -->
   <div id="storeModal">
     <div id="storeModalContent">
-      <h3 id="modalTitle">Stores Not Ranging</h3>
+      <h3 id="modalTitle" style="color:#007aff;">Stores Not Ranging</h3>
       <ul id="storeList"></ul>
     </div>
   </div>
 
   <div>
-    <h3>Raw JSON Debug Output</h3>
+    <h3 style="color:#007aff;">🛠 Debug Output</h3>
     <div id="debug">Waiting for data...</div>
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwixJ_MXyoIF6bTbC5JAY4yXWIkrRmKJd1e6xVbYndSdGHFKUaQ-d8fnWE-edbPq905Pg/exec";
+    const scriptUrl = "YOUR_SCRIPT_URL_HERE"; // replace with your Google Apps Script URL
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
@@ -90,9 +193,7 @@
         const resp = await fetch(scriptUrl);
         const json = await resp.json();
         allData = json;
-
         document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
-
         populateStores();
         resetSummary();
         showDashboard();
@@ -129,30 +230,16 @@
       document.getElementById("dashboard").style.display = "none";
       document.getElementById("storeControls").style.display = "block";
       const container = document.getElementById("products");
-      const summaryBox = document.getElementById("summary");
-      const toggleGroup = document.getElementById("viewToggle");
-
       container.innerHTML = "";
 
       const storeName = document.getElementById("storeSelect").value;
-      if (!storeName) {
-        summaryBox.style.display = "none";
-        toggleGroup.style.display = "none";
-        return;
-      } else {
-        summaryBox.style.display = "block";
-        toggleGroup.style.display = "block";
-      }
+      if (!storeName) return;
 
       const filtered = allData.filter(item => {
         if (item.Store !== storeName) return false;
         const status = String(item.Status).trim().toLowerCase();
-        if (currentView === "not ranging") {
-          return status === "not ranging";
-        }
-        if (currentView === "ranging") {
-          return status === "ranging" || status === "not buying";
-        }
+        if (currentView === "not ranging") return status === "not ranging";
+        if (currentView === "ranging") return status === "ranging" || status === "not buying";
         return false;
       });
 
@@ -181,30 +268,12 @@
         const btnAdd = document.createElement("button");
         btnAdd.className = "add";
         btnAdd.textContent = "Add to Offer";
-        btnAdd.onclick = function(e) {
-          e.stopPropagation();
-          toggleOffer(btnAdd, p);
-        };
+        btnAdd.onclick = e => { e.stopPropagation(); toggleOffer(btnAdd, p); };
 
         const btnNot = document.createElement("button");
         btnNot.className = "not";
         btnNot.textContent = "Not Buying";
-        btnNot.onclick = function(e) {
-          e.stopPropagation();
-          updateStatus(p, "Not Buying");
-        };
-
-        const statusVal = String(p.Status).trim().toLowerCase();
-        if (statusVal === "not buying") {
-          const btnRestore = document.createElement("button");
-          btnRestore.className = "restore";
-          btnRestore.textContent = "Restore";
-          btnRestore.onclick = function(e) {
-            e.stopPropagation();
-            updateStatus(p, "Ranging");
-          };
-          btnDiv.appendChild(btnRestore);
-        }
+        btnNot.onclick = e => { e.stopPropagation(); updateStatus(p, "Not Buying"); };
 
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
@@ -212,12 +281,8 @@
         mainLine.appendChild(nameEl);
         mainLine.appendChild(btnDiv);
 
-        const rightDiv = document.createElement("div");
-        rightDiv.style.flex = "1";
-        rightDiv.appendChild(mainLine);
-
         card.appendChild(img);
-        card.appendChild(rightDiv);
+        card.appendChild(mainLine);
         container.appendChild(card);
       });
     }
@@ -225,7 +290,6 @@
     function toggleOffer(btn, productObj) {
       const productName = productObj["Product"];
       const dealValue = parseFloat(productObj["50% Deal"]) || 0;
-
       if (btn.classList.contains("added")) {
         delete selectedDeals[productName];
         btn.classList.remove("added");
@@ -262,10 +326,7 @@
         headers: { "Content-Type": "application/json" }
       })
       .then(r => r.text())
-      .then(t => {
-        console.log("Server response:", t);
-        loadData();
-      })
+      .then(() => loadData())
       .catch(err => console.error("Error updating sheet:", err));
     }
 
@@ -273,24 +334,17 @@
       currentMode = "dashboard";
       document.getElementById("dashboard").style.display = "block";
       document.getElementById("products").innerHTML = "";
-      document.getElementById("summary").style.display = "none";
-      document.getElementById("viewToggle").style.display = "none";
-      document.getElementById("storeControls").style.display = "none";
-      document.getElementById("viewToggleSwitch").textContent = "Switch to Store View";
       renderDashboard();
     }
 
     function renderDashboard() {
       const container = document.getElementById("dashboardContent");
       container.innerHTML = "";
-
       const grouped = {};
       allData.forEach(item => {
         const product = item.Product;
         const status = String(item.Status).trim().toLowerCase();
-        if (!grouped[product]) {
-          grouped[product] = { product: item, ranging: 0, notRanging: 0, notBuying: 0 };
-        }
+        if (!grouped[product]) grouped[product] = { product: item, ranging: 0, notRanging: 0, notBuying: 0 };
         if (status === "ranging") grouped[product].ranging++;
         else if (status === "not ranging") grouped[product].notRanging++;
         else if (status === "not buying") grouped[product].notBuying++;
@@ -299,35 +353,30 @@
       Object.values(grouped).forEach(g => {
         const card = document.createElement("div");
         card.className = "card";
-
         const img = document.createElement("img");
         img.src = g.product["Image URL"] || "";
         img.alt = g.product.Product || "Product";
-
         const nameEl = document.createElement("strong");
         nameEl.textContent = g.product.Product || "-";
 
         const pill = document.createElement("div");
         pill.style.display = "flex";
-        pill.style.border = "1px solid #ccc";
         pill.style.borderRadius = "20px";
         pill.style.overflow = "hidden";
         pill.style.width = "300px";
         pill.style.height = "20px";
         pill.style.marginTop = "8px";
-
         const total = g.ranging + g.notRanging + g.notBuying || 1;
-        const seg = (count, color) => {
+        const seg = (count, colorClass) => {
           const div = document.createElement("div");
           div.style.width = (count / total * 100) + "%";
-          div.style.background = color;
+          div.className = colorClass;
           div.title = count;
           return div;
         };
-
-        pill.appendChild(seg(g.notRanging, "red"));
-        pill.appendChild(seg(g.notBuying, "orange"));
-        pill.appendChild(seg(g.ranging, "green"));
+        pill.appendChild(seg(g.notRanging, "pill-red"));
+        pill.appendChild(seg(g.notBuying, "pill-orange"));
+        pill.appendChild(seg(g.ranging, "pill-green"));
 
         const counts = document.createElement("div");
         counts.innerHTML = `🔴 ${g.notRanging} | 🟠 ${g.notBuying} | 🟢 ${g.ranging}`;
@@ -340,12 +389,7 @@
 
         card.appendChild(img);
         card.appendChild(rightDiv);
-
-        // click opens modal
-        card.onclick = () => {
-          showStoreModal(g.product.Product);
-        };
-
+        card.onclick = () => showStoreModal(g.product.Product);
         container.appendChild(card);
       });
     }
@@ -355,10 +399,12 @@
         currentMode = "store";
         document.getElementById("dashboard").style.display = "none";
         document.getElementById("storeControls").style.display = "block";
-        document.getElementById("viewToggleSwitch").textContent = "Switch to Dashboard";
+        document.getElementById("viewToggleSwitch").textContent = "🏠 Switch to Dashboard";
         renderProducts();
       } else {
         showDashboard();
+        document.getElementById("storeControls").style.display = "none";
+        document.getElementById("viewToggleSwitch").textContent = "📊 Switch to Store View";
       }
     }
 
@@ -366,14 +412,11 @@
       const modal = document.getElementById("storeModal");
       const title = document.getElementById("modalTitle");
       const list = document.getElementById("storeList");
-
       title.textContent = `Stores Not Ranging: ${productName}`;
       list.innerHTML = "";
-
       const stores = allData
         .filter(item => item.Product === productName && String(item.Status).trim().toLowerCase() === "not ranging")
         .map(item => item.Store);
-
       if (stores.length === 0) {
         const li = document.createElement("li");
         li.textContent = "No stores found.";
@@ -385,15 +428,11 @@
           list.appendChild(li);
         });
       }
-
       modal.style.display = "flex";
     }
 
-    // close modal when clicking outside
-    document.getElementById("storeModal").addEventListener("click", function(e) {
-      if (e.target.id === "storeModal") {
-        this.style.display = "none";
-      }
+    document.getElementById("storeModal").addEventListener("click", e => {
+      if (e.target.id === "storeModal") e.currentTarget.style.display = "none";
     });
 
     loadData();
