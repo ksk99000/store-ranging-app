@@ -9,7 +9,7 @@
     h1 { font-size: 24px; }
     select, button { padding: 8px; margin: 5px 0; }
     .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; display: none; }
-    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor: pointer; }
+    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; }
     .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
     .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
     .buttons { margin-left: auto; }
@@ -24,31 +24,40 @@
     .toggle-group { margin: 10px 0; display: none; }
     .toggle-btn { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 4px; margin-right: 5px; }
     .toggle-btn.active { background: #007bff; color: white; }
+    #viewToggleSwitch { margin-left: 10px; background:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; }
   </style>
 </head>
 <body>
 
   <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
+  <button id="viewToggleSwitch" onclick="toggleView()">Switch to Store View</button>
 
-  <div>
+  <!-- Store controls -->
+  <div id="storeControls" style="display:none;">
     <label for="storeSelect">Select a store:</label>
     <select id="storeSelect" onchange="renderProducts()">
       <option value="">-- Choose a store --</option>
     </select>
-  </div>
 
-  <div class="toggle-group" id="viewToggle">
-    <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">Not Ranging</button>
-    <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">Ranging</button>
-  </div>
+    <div class="toggle-group" id="viewToggle">
+      <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">Not Ranging</button>
+      <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">Ranging</button>
+    </div>
 
-  <div id="summary" class="summary">
-    <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
-    <ul id="offerList"></ul>
+    <div id="summary" class="summary">
+      <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
+      <ul id="offerList"></ul>
+    </div>
   </div>
 
   <div id="products"></div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none; margin-top:20px;">
+    <h2>Product Dashboard</h2>
+    <div id="dashboardContent"></div>
+  </div>
 
   <div>
     <h3>Raw JSON Debug Output</h3>
@@ -60,6 +69,7 @@
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
+    let currentMode = "dashboard"; // "dashboard" or "store"
 
     async function loadData() {
       try {
@@ -72,7 +82,7 @@
 
         populateStores();
         resetSummary();
-        renderProducts();
+        showDashboard(); // Default landing view
       } catch (err) {
         document.getElementById("debug").textContent = "Error fetching data: " + err;
       }
@@ -103,13 +113,15 @@
     }
 
     function renderProducts() {
-      const storeName = document.getElementById("storeSelect").value;
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("storeControls").style.display = "block";
       const container = document.getElementById("products");
       const summaryBox = document.getElementById("summary");
       const toggleGroup = document.getElementById("viewToggle");
 
       container.innerHTML = "";
 
+      const storeName = document.getElementById("storeSelect").value;
       if (!storeName) {
         summaryBox.style.display = "none";
         toggleGroup.style.display = "none";
@@ -169,7 +181,6 @@
           updateStatus(p, "Not Buying");
         };
 
-        // Restore button only if product is currently Not Buying
         const statusVal = String(p.Status).trim().toLowerCase();
         if (statusVal === "not buying") {
           const btnRestore = document.createElement("button");
@@ -208,13 +219,6 @@
 
         card.appendChild(img);
         card.appendChild(rightDiv);
-
-        card.onclick = function(e) {
-          if (!e.target.classList.contains("add") && !e.target.classList.contains("not") && !e.target.classList.contains("restore")) {
-            detailsDiv.style.display = (detailsDiv.style.display === "flex" ? "none" : "flex");
-          }
-        };
-
         container.appendChild(card);
       });
     }
@@ -256,16 +260,101 @@
           Product: productObj.Product,
           Status: newStatus
         }),
-        headers: {
-          "Content-Type": "application/json"
-        }
+        headers: { "Content-Type": "application/json" }
       })
       .then(r => r.text())
       .then(t => {
         console.log("Server response:", t);
-        loadData(); // reload so product moves to correct list immediately
+        loadData();
       })
       .catch(err => console.error("Error updating sheet:", err));
+    }
+
+    function showDashboard() {
+      currentMode = "dashboard";
+      document.getElementById("dashboard").style.display = "block";
+      document.getElementById("products").innerHTML = "";
+      document.getElementById("summary").style.display = "none";
+      document.getElementById("viewToggle").style.display = "none";
+      document.getElementById("storeControls").style.display = "none";
+      document.getElementById("viewToggleSwitch").textContent = "Switch to Store View";
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      const container = document.getElementById("dashboardContent");
+      container.innerHTML = "";
+
+      const grouped = {};
+      allData.forEach(item => {
+        const product = item.Product;
+        const status = String(item.Status).trim().toLowerCase();
+        if (!grouped[product]) {
+          grouped[product] = { product: item, ranging: 0, notRanging: 0, notBuying: 0 };
+        }
+        if (status === "ranging") grouped[product].ranging++;
+        else if (status === "not ranging") grouped[product].notRanging++;
+        else if (status === "not buying") grouped[product].notBuying++;
+      });
+
+      Object.values(grouped).forEach(g => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const img = document.createElement("img");
+        img.src = g.product["Image URL"] || "";
+        img.alt = g.product.Product || "Product";
+
+        const nameEl = document.createElement("strong");
+        nameEl.textContent = g.product.Product || "-";
+
+        const pill = document.createElement("div");
+        pill.style.display = "flex";
+        pill.style.border = "1px solid #ccc";
+        pill.style.borderRadius = "20px";
+        pill.style.overflow = "hidden";
+        pill.style.width = "300px";
+        pill.style.height = "20px";
+        pill.style.marginTop = "8px";
+
+        const total = g.ranging + g.notRanging + g.notBuying || 1;
+        const seg = (count, color) => {
+          const div = document.createElement("div");
+          div.style.width = (count / total * 100) + "%";
+          div.style.background = color;
+          div.title = count;
+          return div;
+        };
+
+        pill.appendChild(seg(g.notRanging, "red"));
+        pill.appendChild(seg(g.notBuying, "orange"));
+        pill.appendChild(seg(g.ranging, "green"));
+
+        const counts = document.createElement("div");
+        counts.innerHTML = `🔴 ${g.notRanging} | 🟠 ${g.notBuying} | 🟢 ${g.ranging}`;
+
+        const rightDiv = document.createElement("div");
+        rightDiv.style.flex = "1";
+        rightDiv.appendChild(nameEl);
+        rightDiv.appendChild(pill);
+        rightDiv.appendChild(counts);
+
+        card.appendChild(img);
+        card.appendChild(rightDiv);
+        container.appendChild(card);
+      });
+    }
+
+    function toggleView() {
+      if (currentMode === "dashboard") {
+        currentMode = "store";
+        document.getElementById("dashboard").style.display = "none";
+        document.getElementById("storeControls").style.display = "block";
+        document.getElementById("viewToggleSwitch").textContent = "Switch to Dashboard";
+        renderProducts();
+      } else {
+        showDashboard();
+      }
     }
 
     loadData();
