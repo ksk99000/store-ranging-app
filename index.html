@@ -2,214 +2,139 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📱 Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f9fbfd;
-      color: #333;
-    }
-    header {
-      background: #007aff;
-      color: white;
-      padding: 14px;
-      font-size: 20px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .container {
-      padding: 15px;
-    }
-    button {
-      border: none;
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin: 5px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      color: white;
-    }
-    .refresh { background: #007aff; }
-    .dashboard { background: #34c759; }
-    .add { background: #007aff; }
-    .added { background: #34c759; }
-    .not { background: #ff3b30; }
-    .product-card {
-      background: #fff;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .product-card img {
-      width: 70px;
-      height: 70px;
-      object-fit: contain;
-      border-radius: 8px;
-      margin-right: 12px;
-      border: 1px solid #eee;
-    }
-    .product-info {
-      flex: 1;
-    }
-    .debug {
-      background: #fff3cd;
-      color: #856404;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ffeeba;
-      border-radius: 6px;
-      font-size: 12px;
-      font-family: monospace;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:#f8f9fb; margin:0; padding:10px; }
+    h1 { font-size:20px; margin:10px 0; color:#007aff; }
+    button { padding:8px 14px; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+    .refresh { background:#007aff; color:white; }
+    .switch { background:#34c759; color:white; margin-left:8px; }
+    .store-card { display:flex; align-items:center; border:1px solid #ddd; border-radius:8px; padding:10px; margin:10px 0; background:white; }
+    .store-card img { width:70px; height:70px; object-fit:cover; border-radius:6px; margin-right:10px; }
+    .info { flex:1; }
+    .buttons { display:flex; gap:6px; margin-top:6px; }
+    .add { background:#007aff; color:white; }
+    .add.added { background:#34c759; }
+    .not { background:#ff3b30; color:white; }
+    #summary { margin:12px 0; padding:10px; background:#e9f4ff; border:1px solid #cde; border-radius:6px; }
+    #debug { margin-top:20px; font-size:13px; padding:10px; background:#fff3cd; border:1px solid #ffeeba; border-radius:6px; }
   </style>
 </head>
 <body>
-  <header>📱 Store Ranging App</header>
-  <div class="container">
-    <button class="refresh" onclick="loadData()">🔄 Refresh</button>
-    <button class="dashboard" onclick="toggleView()">📊 Switch to Dashboard</button>
+  <h1>📱 Store Ranging App</h1>
+  <button class="refresh" onclick="loadData()">🔄 Refresh</button>
+  <button class="switch" onclick="alert('Dashboard coming back soon!')">📊 Switch to Dashboard</button>
 
-    <div id="storeView">
-      <label for="storeSelect">Select a store:</label>
-      <select id="storeSelect" onchange="renderStoreProducts()"></select>
-
-      <h3>Total Deal Offer Summary</h3>
-      <div id="dealSummary">$0.00</div>
-
-      <h3>Products</h3>
-      <div id="products"></div>
-    </div>
-
-    <div id="dashboardView" style="display:none;">
-      <h3>📊 Product Dashboard</h3>
-      <div id="dashboard"></div>
-    </div>
-
-    <h3>🛠 Debug Output</h3>
-    <pre id="debug" class="debug"></pre>
+  <div>
+    <label for="store">Select a store:</label>
+    <select id="store" onchange="renderProducts()">
+      <option>-- Choose a store --</option>
+    </select>
   </div>
 
-  <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwjs8iFcXbkXPcYbcvqAgKtU2grsMuxcoOOVY8Aox3nXppahHuktklIf7snHC86yN907Q/exec";
-    let storeData = [];
-    let productData = [];
-    let dealTotal = 0;
-    let addedProducts = new Map();
+  <div id="summary" style="display:none;">
+    <h3>Total Deal Offer Summary</h3>
+    <div id="total">$0.00</div>
+  </div>
 
-    async function loadData() {
-      try {
-        const res = await fetch(scriptUrl);
-        const text = await res.text();
+  <div id="products"></div>
 
-        if (!text.startsWith("{") && !text.startsWith("[")) {
-          document.getElementById("debug").textContent = "Error: Response is not valid JSON.\n" + text;
-          return;
-        }
+  <div id="debug">
+    <b>🛠 Debug Output</b>
+    <div id="debugOutput"></div>
+  </div>
 
-        const data = JSON.parse(text);
-        storeData = data.ranging || [];
-        productData = data.deals || [];
+<script>
+const scriptUrl = "https://script.google.com/macros/s/AKfycbwjs8iFcXbkXPcYbcvqAgKtU2grsMuxcoOOVY8Aox3nXppahHuktklIf7snHC86yN907Q/exec";
 
-        document.getElementById("debug").textContent = "Loaded " + storeData.length + " ranging rows & " + productData.length + " products.";
+let allData = [];
+let currentStore = "";
+let dealSummary = {};
 
-        populateStoreDropdown();
-      } catch (err) {
-        document.getElementById("debug").textContent = "Error loading data: " + err;
-      }
-    }
+async function loadData() {
+  try {
+    document.getElementById("debugOutput").textContent = "Loading...";
+    const res = await fetch(scriptUrl);
+    const data = await res.json();
+    allData = data;
+    document.getElementById("debugOutput").textContent = "Loaded " + data.length + " rows";
 
-    function populateStoreDropdown() {
-      const select = document.getElementById("storeSelect");
-      select.innerHTML = '<option>-- Choose a store --</option>';
-      [...new Set(storeData.map(r => r.Store))].forEach(store => {
-        const opt = document.createElement("option");
-        opt.value = store;
-        opt.textContent = store;
-        select.appendChild(opt);
-      });
-    }
+    // Populate store dropdown
+    const storeSelect = document.getElementById("store");
+    storeSelect.innerHTML = `<option>-- Choose a store --</option>`;
+    [...new Set(data.map(r => r.Store))].forEach(store => {
+      const opt = document.createElement("option");
+      opt.value = store;
+      opt.textContent = store;
+      storeSelect.appendChild(opt);
+    });
+  } catch (err) {
+    document.getElementById("debugOutput").textContent = "Error: " + err;
+  }
+}
 
-    function renderStoreProducts() {
-      const store = document.getElementById("storeSelect").value;
-      const container = document.getElementById("products");
-      container.innerHTML = "";
+function renderProducts() {
+  currentStore = document.getElementById("store").value;
+  const container = document.getElementById("products");
+  container.innerHTML = "";
 
-      if (!store || store === "-- Choose a store --") return;
+  if (!currentStore || currentStore.includes("Choose")) {
+    document.getElementById("summary").style.display = "none";
+    return;
+  }
 
-      const products = storeData.filter(r => r.Store === store && r.Status.toLowerCase() !== "ranging");
-      products.forEach(r => {
-        const info = productData.find(p => p.Product === r.Product) || {};
-        const price = parseFloat((info['50% Deal'] || "0").toString().replace(/[^0-9.]/g, "")) || 0;
+  document.getElementById("summary").style.display = "block";
+  updateSummary();
 
-        const card = document.createElement("div");
-        card.className = "product-card";
-        card.innerHTML = `
-          <img src="${info['Image URL'] || ''}" alt="Product">
-          <div class="product-info">
-            <strong>${r.Product}</strong><br>
-            Metcash Code: ${info['Metcash Code'] || '-'}<br>
-            List Price: ${info['List Price'] || '-'}<br>
-            50% Deal: ${info['50% Deal'] || '-'}
-            <div>
-              <button class="add" id="btn-${r.Product.replace(/\s+/g, "_")}"
-                onclick="toggleDeal('${r.Product.replace(/'/g, "\\'")}', ${price})">
-                Add to Offer
-              </button>
-              <button class="not" onclick="removeProduct('${r.Product.replace(/'/g, "\\'")}')">Not Buying</button>
-            </div>
-          </div>`;
-        container.appendChild(card);
-      });
-    }
+  const storeProducts = allData.filter(r => r.Store === currentStore && r.Status === "not ranging");
+  if (storeProducts.length === 0) {
+    container.textContent = "No products found.";
+    return;
+  }
 
-    function toggleDeal(product, price) {
-      const btn = document.getElementById("btn-" + product.replace(/\s+/g, "_"));
-      if (!btn) return;
+  storeProducts.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "store-card";
+    card.innerHTML = `
+      <img src="${p['Image URL'] || 'https://via.placeholder.com/70'}" alt="Product">
+      <div class="info">
+        <strong>${p.Product}</strong>
+        <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+        <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+        <div class="buttons">
+          <button class="add" onclick="toggleOffer('${p.Product}', ${p['50% Deal'] || 0}, this)">Add to Offer</button>
+          <button class="not" onclick="removeProduct('${p.Product}')">Not Buying</button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
 
-      if (addedProducts.has(product)) {
-        addedProducts.delete(product);
-        dealTotal -= price;
-        btn.textContent = "Add to Offer";
-        btn.className = "add";
-      } else {
-        addedProducts.set(product, price);
-        dealTotal += price;
-        btn.textContent = "Added";
-        btn.className = "added";
-      }
-      document.getElementById("dealSummary").textContent = "$" + dealTotal.toFixed(2);
-    }
+function toggleOffer(product, dealValue, btn) {
+  if (!dealSummary[currentStore]) dealSummary[currentStore] = {};
+  if (dealSummary[currentStore][product]) {
+    delete dealSummary[currentStore][product];
+    btn.classList.remove("added");
+    btn.textContent = "Add to Offer";
+  } else {
+    dealSummary[currentStore][product] = Number(dealValue) || 0;
+    btn.classList.add("added");
+    btn.textContent = "Added";
+  }
+  updateSummary();
+}
 
-    function removeProduct(product) {
-      const container = document.getElementById("products");
-      [...container.children].forEach(card => {
-        if (card.innerText.includes(product)) {
-          card.remove();
-        }
-      });
-    }
+function updateSummary() {
+  const totalBox = document.getElementById("total");
+  const deals = dealSummary[currentStore] || {};
+  const total = Object.values(deals).reduce((a,b) => a+b, 0);
+  totalBox.textContent = `$${total.toFixed(2)}`;
+}
 
-    function toggleView() {
-      const storeView = document.getElementById("storeView");
-      const dashboardView = document.getElementById("dashboardView");
-      if (storeView.style.display === "none") {
-        storeView.style.display = "";
-        dashboardView.style.display = "none";
-      } else {
-        storeView.style.display = "none";
-        dashboardView.style.display = "";
-      }
-    }
-
-    loadData();
-  </script>
+function removeProduct(product) {
+  alert(product + " removed (simulate Not Buying)");
+}
+</script>
 </body>
 </html>
