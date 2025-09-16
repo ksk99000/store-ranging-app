@@ -20,7 +20,7 @@
     #products { margin-top: 20px; }
     #offerList { margin-top: 10px; padding-left: 20px; }
     #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
-    .toggle-group { margin: 10px 0; }
+    .toggle-group { margin: 10px 0; display: none; }
     .toggle-btn { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 4px; margin-right: 5px; }
     .toggle-btn.active { background: #007bff; color: white; }
   </style>
@@ -37,7 +37,7 @@
     </select>
   </div>
 
-  <div class="toggle-group" id="viewToggle" style="display:none;">
+  <div class="toggle-group" id="viewToggle">
     <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">Not Ranging</button>
     <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">Ranging</button>
   </div>
@@ -55,7 +55,7 @@
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbyy4NwdNbsRPJIXQKvXOZzCuivIoaUS90hIiTN_zNOkzl-gLZtV-RHiVC8eDpHg4xC-Sw/exec";
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
@@ -108,6 +108,7 @@
       const toggleGroup = document.getElementById("viewToggle");
 
       container.innerHTML = "";
+
       if (!storeName) {
         summaryBox.style.display = "none";
         toggleGroup.style.display = "none";
@@ -117,6 +118,7 @@
         toggleGroup.style.display = "block";
       }
 
+      // Case-insensitive match for Status
       const filtered = allData.filter(item => 
         item.Store === storeName && String(item.Status).trim().toLowerCase() === currentView
       );
@@ -232,4 +234,4 @@
     loadData();
   </script>
 </body>
-</html> 
+</html>
