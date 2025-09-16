@@ -4,55 +4,19 @@
   <meta charset="UTF-8">
   <title>📱 Store Ranging App</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f7fa;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 10px;
-      text-align: center;
-    }
-    header small {
-      display: block;
-      font-size: 0.8em;
-      margin-top: 4px;
-      color: #e0e0e0;
-    }
-    .container {
-      padding: 15px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-right: 10px;
-    }
-    select {
-      padding: 8px;
-      border-radius: 6px;
-    }
-    h2 {
-      margin-top: 20px;
-    }
-    .debug {
-      background: #fff3cd;
-      border-left: 4px solid #ffecb5;
-      padding: 10px;
-      margin-top: 20px;
-      font-family: monospace;
-    }
+    body { font-family: Arial, sans-serif; background: #f5f7fa; margin:0; padding:0; }
+    header { background:#007bff; color:white; text-align:center; padding:10px; }
+    header small { display:block; font-size:0.8em; margin-top:4px; color:#e0e0e0; }
+    .container { padding:15px; }
+    button { background:#007bff; color:white; border:none; padding:8px 12px; border-radius:6px; margin-right:10px; }
+    select { padding:8px; border-radius:6px; }
+    .debug { background:#fff3cd; border-left:4px solid #ffecb5; padding:10px; margin-top:20px; font-family:monospace; white-space:pre-wrap; word-wrap:break-word; }
   </style>
 </head>
 <body>
   <header>
     <h1>📱 Store Ranging App</h1>
-    <small>Version: v1.2.0 (17 Sept 2025)</small>
+    <small>Version: v1.3.0 (17 Sept 2025)</small>
   </header>
 
   <div class="container">
@@ -73,12 +37,12 @@
 
     async function loadData() {
       const debugBox = document.getElementById("debug");
-      const productsDiv = document.getElementById("products");
       const storeSelect = document.getElementById("storeSelect");
+      const productsDiv = document.getElementById("products");
 
       debugBox.textContent = "⏳ Loading data...";
-      productsDiv.innerHTML = "";
       storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+      productsDiv.innerHTML = "";
 
       try {
         const res = await fetch(API_URL);
@@ -87,35 +51,38 @@
 
         debugBox.textContent = JSON.stringify(data, null, 2);
 
-        // Fill store dropdown
-        if (data.stores) {
-          data.stores.forEach(store => {
+        // ✅ Parse stores from sampleData.Data (skip header row)
+        if (data.sampleData && data.sampleData.Data) {
+          const rows = data.sampleData.Data;
+          for (let i = 1; i < rows.length; i++) {
+            const storeId = rows[i][0];
+            const storeName = rows[i][1];
             const opt = document.createElement("option");
-            opt.value = store.store;
-            opt.textContent = store.store;
+            opt.value = storeId;
+            opt.textContent = storeName;
             storeSelect.appendChild(opt);
-          });
+          }
         }
 
-        // Show first 10 products
-        if (data.deals) {
-          data.deals.slice(0, 10).forEach(item => {
+        // ✅ Show first 10 deals
+        if (data.sampleData && data.sampleData.Deals) {
+          data.sampleData.Deals.slice(0, 10).forEach(item => {
             const div = document.createElement("div");
             div.style.border = "1px solid #ddd";
             div.style.margin = "5px 0";
             div.style.padding = "10px";
             div.style.borderRadius = "6px";
             div.innerHTML = `
-              <strong>${item.product}</strong> <br>
-              Code: ${item.code} | SDA: ${item.sda} <br>
-              <img src="${item.image}" alt="${item.product}" style="max-width:100px;margin-top:5px">
+              <strong>${item.product}</strong><br>
+              Code: ${item.code} | SDA: ${item.sda || "N/A"}<br>
+              <img src="${item.image}" style="max-width:100px;margin-top:5px">
             `;
             productsDiv.appendChild(div);
           });
         }
 
       } catch (err) {
-        debugBox.textContent = "❌ Error loading: " + err.message;
+        debugBox.textContent = "❌ Error: " + err.message;
       }
     }
   </script>
