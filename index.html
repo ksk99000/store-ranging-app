@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📱 Store Ranging App</title>
+  <title>📱 Store Ranging App v1.0.0</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -14,6 +14,11 @@
     h1 {
       color: #007aff;
       font-size: 22px;
+      margin-bottom: 5px;
+    }
+    .version {
+      font-size: 13px;
+      color: #999;
       margin-bottom: 15px;
     }
     button {
@@ -69,6 +74,8 @@
 </head>
 <body>
   <h1>📱 Store Ranging App</h1>
+  <div class="version">Version: v1.0.0 (17 Sept 2025)</div>
+
   <button onclick="loadData()">🔄 Refresh</button>
   <select id="storeSelect" onchange="renderProducts()">
     <option value="">-- Choose a store --</option>
