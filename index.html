@@ -63,17 +63,18 @@
 
         merged = [];
         ranging.forEach(row => {
-          const store = row["Store"] || row["store"] || "";
-          if (!store) return;
-          Object.keys(row).forEach(key => {
-            if (["Store ID","Store","store","Banner","MSO"].includes(key)) return;
-            const status = row[key];
-            if (!status) return;
-            const productMeta = deals.find(d => d["Product"] === key);
+          // Store name is always in the first column
+          const storeName = Object.values(row)[0];
+          if (!storeName) return;
+
+          // Iterate through product columns
+          Object.entries(row).forEach(([productName, status]) => {
+            if (productName === storeName || !status) return; // skip first column
+            const productMeta = deals.find(d => d["Product"] === productName);
             if (productMeta) {
               merged.push({
-                Store: store,
-                Product: key,
+                Store: storeName,
+                Product: productName,
                 Ranging: status,
                 ImageURL: productMeta["Image URL"] || "",
                 Category: productMeta["Category"] || "Default"
