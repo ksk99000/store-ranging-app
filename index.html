@@ -2,82 +2,85 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App (with Debug)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App (Debug)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; }
     .product-card {
       border: 1px solid #ccc;
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 10px;
       margin: 10px 0;
       display: flex;
       align-items: flex-start;
-      background: #fafafa;
     }
     .product-card img {
       width: 80px;
       height: 80px;
-      object-fit: contain;
-      margin-right: 15px;
+      object-fit: cover;
+      margin-right: 10px;
     }
-    .product-info { flex-grow: 1; }
-    .buttons { display: flex; flex-direction: column; gap: 6px; }
-    button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .add-btn { background: #007bff; color: #fff; }
-    .not-btn { background: #dc3545; color: #fff; }
+    .product-info { flex: 1; }
+    .buttons { margin-top: 10px; }
+    button { margin-right: 5px; }
+    pre { background: #f4f4f4; padding: 10px; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App (Debug)</h1>
-
   <button onclick="loadData()">Refresh</button>
-  <br><br>
-  <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="renderProducts()">
-    <option value="">-- Choose a store --</option>
-  </select>
+  
+  <div>
+    <label for="storeSelect">Select a store:</label>
+    <select id="storeSelect" onchange="renderProducts()">
+      <option value="">-- Choose a store --</option>
+    </select>
+  </div>
 
-  <h2>Raw JSON Debug Output</h2>
-  <pre id="debug"></pre>
-
-  <h2>Products</h2>
   <div id="products"></div>
 
+  <h2>Debug Output</h2>
+  <pre id="debugOutput">Raw JSON will appear here</pre>
+
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxk_xDNMBSOacqdDq-IVykQYPSaJpsb37qD57CfSVP6l6ro8Au5g9D6JmsLCefT6xAQsQ/exec";
-    let allData = [];
+    const scriptURL = "https://script.google.com/macros/s/AKfycbxFutUI7R00ma2XpF2lKHr9HLOPl7Nb4aYqt6MpWWuvr2FPCqAk2zuP4w7M6nyVGwQ/exec";
+    let storeData = {};
 
     async function loadData() {
-      document.getElementById("products").innerHTML = "Loading...";
-      document.getElementById("debug").textContent = "Loading...";
-
       try {
-        const res = await fetch(API_URL);
-        const text = await res.text(); // raw text
-        document.getElementById("debug").textContent = text; // show raw JSON
-        allData = JSON.parse(text); // parse JSON
+        const res = await fetch(scriptURL);
+        const data = await res.json();
+        document.getElementById("debugOutput").textContent = JSON.stringify(data, null, 2);
 
-        const stores = [...new Set(allData.map(item => item.Store))].filter(s => s);
-        const select = document.getElementById("storeSelect");
-        select.innerHTML = '<option value="">-- Choose a store --</option>';
-        stores.forEach(store => {
+        storeData = {};
+        data.forEach(row => {
+          const { Store, Product, Status, ImageURL, MetcashCode, SDARanking, Category, MetcashLayout, MetcashBaseRange, ListPrice, Deal50 } = row;
+
+          if (Status === "Not Ranging") {
+            if (!storeData[Store]) storeData[Store] = [];
+            storeData[Store].push({
+              Product,
+              ImageURL,
+              MetcashCode,
+              SDARanking,
+              Category,
+              MetcashLayout,
+              MetcashBaseRange,
+              ListPrice,
+              Deal50
+            });
+          }
+        });
+
+        const storeSelect = document.getElementById("storeSelect");
+        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+        Object.keys(storeData).forEach(store => {
           const opt = document.createElement("option");
           opt.value = store;
           opt.textContent = store;
-          select.appendChild(opt);
+          storeSelect.appendChild(opt);
         });
-
-        document.getElementById("products").innerHTML = "Select a store to see Not Ranging products.";
       } catch (err) {
-        document.getElementById("products").innerHTML = "Error loading data: " + err;
-        console.error("Fetch error:", err);
+        document.getElementById("debugOutput").textContent = "Error loading data: " + err;
       }
     }
 
@@ -86,52 +89,38 @@
       const container = document.getElementById("products");
       container.innerHTML = "";
 
-      if (!store) return;
+      if (!store || !storeData[store]) return;
 
-      const products = allData.filter(p =>
-        p.Store === store &&
-        p.Status &&
-        p.Status.trim().toLowerCase() === "not ranging"
-      );
-
-      if (products.length === 0) {
-        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
-        return;
-      }
-
-      products.forEach(p => {
+      storeData[store].forEach(p => {
         const card = document.createElement("div");
         card.className = "product-card";
-
         card.innerHTML = `
-          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
+          <img src="${p.ImageURL || 'https://via.placeholder.com/80'}" alt="Product Image">
           <div class="product-info">
-            <p><strong>${p.Product || '-'}</strong></p>
-            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
-            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
-            <p>Category: ${p['Category'] || '-'}</p>
-            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
-            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
-            <p>List Price: ${p['List Price'] || '-'}</p>
-            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
-            <p>Status: ${p['Status'] || '-'}</p>
-          </div>
-          <div class="buttons">
-            <button class="add-btn" onclick="addToOffer('${p.Store}','${p.Product}')">Add to Offer</button>
-            <button class="not-btn" onclick="markNotBuying('${p.Store}','${p.Product}')">Not Buying</button>
+            <strong>${p.Product}</strong><br>
+            Metcash Code: ${p.MetcashCode || "-"}<br>
+            SDA Ranking: ${p.SDARanking || "-"}<br>
+            Category: ${p.Category || "-"}<br>
+            Metcash Layout: ${p.MetcashLayout || "-"}<br>
+            Metcash Base Range: ${p.MetcashBaseRange || "-"}<br>
+            List Price: ${p.ListPrice || "-"}<br>
+            50% Deal: ${p.Deal50 || "-"}<br>
+            <div class="buttons">
+              <button onclick="addToOffer('${p.Product}')">Add to Offer</button>
+              <button onclick="notBuying('${p.Product}')">Not Buying</button>
+            </div>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function addToOffer(store, product) {
-      alert(`✅ ${product} added to offer for ${store}`);
+    function addToOffer(product) {
+      alert(`Added to offer: ${product}`);
     }
 
-    function markNotBuying(store, product) {
-      alert(`❌ ${product} marked as Not Buying for ${store}`);
-      // later we can wire this to update the Google Sheet
+    function notBuying(product) {
+      alert(`Marked as not buying: ${product}`);
     }
 
     loadData();
