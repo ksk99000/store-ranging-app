@@ -1,96 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
   <title>Store Ranging App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .product-card {
       border: 1px solid #ccc;
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 10px;
-      margin: 10px 0;
+      margin-bottom: 10px;
       display: flex;
-      align-items: flex-start;
-      background: #fafafa;
+      align-items: center;
     }
     .product-card img {
       width: 80px;
       height: 80px;
-      object-fit: contain;
-      margin-right: 12px;
+      margin-right: 10px;
+      object-fit: cover;
     }
-    .product-info { flex: 1; }
-    .buttons { margin-top: 10px; }
-    button { padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
-    .add { background: #007bff; color: white; }
-    .not { background: #dc3545; color: white; }
-    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; max-height: 250px; overflow-y: auto; }
+    .buttons button {
+      margin: 5px;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .add { background-color: #007bff; color: white; }
+    .not { background-color: #dc3545; color: white; }
+    #popup {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      padding: 20px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    #popup button {
+      margin-top: 10px;
+      background: #555;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
   <br><br>
-
   <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="renderProducts()">
-    <option value="">-- Choose a store --</option>
-  </select>
+  <select id="storeSelect"></select>
 
   <h2>Products</h2>
-  <div id="products"></div>
+  <div id="productContainer"></div>
 
-  <h2>Debug Output</h2>
-  <pre id="debugOutput">Raw JSON will appear here</pre>
+  <!-- Popup -->
+  <div id="popup"></div>
 
   <script>
     const scriptUrl = "https://script.google.com/macros/s/AKfycbxwpjfu80sA2RRw1TdV0FW27RBQsfpucO1d0hgx1nvMxOk7ep5V7tuvnvyBScFjjoZUDw/exec";
-    let allData = [];
 
     async function loadData() {
-      const productsDiv = document.getElementById("products");
-      productsDiv.innerHTML = "Loading...";
       try {
         const res = await fetch(scriptUrl);
-        const text = await res.text();
-        document.getElementById("debugOutput").textContent = text; // raw debug
-        allData = JSON.parse(text);
+        const data = await res.json();
+        console.log("Fetched data:", data);
 
-        // Build dropdown
-        const stores = [...new Set(allData.map(r => r.Store))].filter(s => s);
+        // Populate stores
         const storeSelect = document.getElementById("storeSelect");
-        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-        stores.forEach(store => {
+        const stores = [...new Set(data.map(r => r.Store))];
+        storeSelect.innerHTML = "<option value=''>-- Choose a store --</option>";
+        stores.forEach(s => {
           const opt = document.createElement("option");
-          opt.value = store;
-          opt.textContent = store;
+          opt.value = s;
+          opt.textContent = s;
           storeSelect.appendChild(opt);
         });
 
-        productsDiv.innerHTML = "Select a store to view Not Ranging products.";
+        storeSelect.onchange = () => renderProducts(data, storeSelect.value);
+
       } catch (err) {
-        productsDiv.innerHTML = "Error loading data: " + err;
-        console.error("Fetch error:", err);
+        console.error("Error loading data", err);
+        document.getElementById("productContainer").textContent = "Error loading data.";
       }
     }
 
-    function renderProducts() {
-      const store = document.getElementById("storeSelect").value;
-      const container = document.getElementById("products");
+    function renderProducts(data, store) {
+      const container = document.getElementById("productContainer");
       container.innerHTML = "";
 
-      if (!store) return;
-
-      const products = allData.filter(p =>
-        p.Store === store &&
-        p.Status &&
-        p.Status.toString().trim().toLowerCase() === "not ranging"
-      );
-
+      const products = data.filter(r => r.Store === store && r.Status === "Not Ranging");
       if (products.length === 0) {
-        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
+        container.textContent = "No products found.";
         return;
       }
 
@@ -99,19 +106,12 @@
         card.className = "product-card";
         card.innerHTML = `
           <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
-          <div class="product-info">
-            <p><strong>${p.Product || '-'}</strong></p>
-            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
-            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
-            <p>Category: ${p['Category'] || '-'}</p>
-            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
-            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
-            <p>List Price: ${p['List Price'] || '-'}</p>
-            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
-            <p>Status: ${p['Status'] || '-'}</p>
+          <div>
+            <h3>${p['Product']}</h3>
             <div class="buttons">
-              <button class="add" onclick="updateStatus('${p.Store}','${p.Product}','Offer')">Add to Offer</button>
-              <button class="not" onclick="updateStatus('${p.Store}','${p.Product}','Not Buying')">Not Buying</button>
+              <button onclick='openPopup(${JSON.stringify(p)})'>Details</button>
+              <button class="add" onclick="updateStatus('${store}', '${p['Product']}', 'Offer')">Add to Offer</button>
+              <button class="not" onclick="updateStatus('${store}', '${p['Product']}', 'Not Ranging')">Not Buying</button>
             </div>
           </div>
         `;
@@ -119,16 +119,41 @@
       });
     }
 
+    function openPopup(p) {
+      const popup = document.getElementById("popup");
+      popup.innerHTML = `
+        <h3>${p['Product']}</h3>
+        <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+        <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
+        <p>Category: ${p['Category'] || '-'}</p>
+        <p>Layout: ${p['Metcash Layout'] || '-'}</p>
+        <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
+        <p>List Price: ${p['List Price'] || '-'}</p>
+        <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+        <p>Status: ${p['Status'] || '-'}</p>
+        <button onclick="closePopup()">Close</button>
+      `;
+      popup.style.display = "block";
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
+    }
+
     async function updateStatus(store, product, status) {
+      console.log("Updating:", store, product, status);
       try {
-        await fetch(scriptUrl, {
+        const res = await fetch(scriptUrl, {
           method: "POST",
           body: JSON.stringify({ Store: store, Product: product, Status: status }),
           headers: { "Content-Type": "application/json" }
         });
-        alert(`Updated: ${product} → ${status}`);
-        loadData(); // reload after update
+        const result = await res.text();
+        console.log("Server response:", result);
+        alert(`Updated: ${product} -> ${status}`);
+        loadData(); // refresh products after update
       } catch (err) {
+        console.error("Update failed", err);
         alert("Update failed: " + err);
       }
     }
