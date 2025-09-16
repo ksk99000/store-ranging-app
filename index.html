@@ -2,117 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📱 Store Ranging App</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f7f9fc;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
       margin: 0;
       padding: 0;
     }
     header {
       background: #007bff;
       color: white;
-      padding: 12px;
+      padding: 10px;
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
     }
-    .version {
-      font-size: 12px;
-      color: #ddd;
+    header small {
+      display: block;
+      font-size: 0.8em;
       margin-top: 4px;
+      color: #e0e0e0;
     }
     .container {
       padding: 15px;
     }
     button {
       background: #007bff;
-      border: none;
       color: white;
-      padding: 10px 15px;
+      border: none;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
       margin-right: 10px;
-    }
-    button:hover {
-      background: #0056b3;
     }
     select {
       padding: 8px;
-      font-size: 14px;
+      border-radius: 6px;
     }
     h2 {
       margin-top: 20px;
     }
     .debug {
       background: #fff3cd;
+      border-left: 4px solid #ffecb5;
       padding: 10px;
-      border: 1px solid #ffeeba;
-      border-radius: 6px;
-      margin-top: 15px;
+      margin-top: 20px;
       font-family: monospace;
-      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
   <header>
-    📱 Store Ranging App
-    <div class="version">Version: v1.1.0 (17 Sept 2025)</div>
+    <h1>📱 Store Ranging App</h1>
+    <small>Version: v1.2.0 (17 Sept 2025)</small>
   </header>
-  
+
   <div class="container">
     <button onclick="loadData()">🔄 Refresh</button>
-    <select id="storeDropdown">
-      <option>-- Choose a store --</option>
+    <select id="storeSelect">
+      <option value="">-- Choose a store --</option>
     </select>
 
     <h2>Products</h2>
-    <div id="productList"></div>
+    <div id="products"></div>
 
-    <h2>🛠 Debug Output</h2>
-    <div id="debug" class="debug"></div>
+    <h2>🛠️ Debug Output</h2>
+    <div id="debug" class="debug">Waiting for data...</div>
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwuCYVCM0Ix_Wy2czkcQ8Wnv8eAD1Wkx6yQJaK8dGmwNwEXnXsHWRT0uGPCka38wUbM8w/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbw2a7r1uV7_WdypuPWlR0TNsv_8dlp70naBfdcAnA6xzKWFD6nwrx9gyP3YdVsMUGUchQ/exec";
 
     async function loadData() {
-      const debug = document.getElementById("debug");
-      debug.innerText = "Loading data...";
+      const debugBox = document.getElementById("debug");
+      const productsDiv = document.getElementById("products");
+      const storeSelect = document.getElementById("storeSelect");
+
+      debugBox.textContent = "⏳ Loading data...";
+      productsDiv.innerHTML = "";
+      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
 
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Network error: " + response.status);
-        
-        const data = await response.json();
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
 
-        // Check structure
-        if (!data.deals || !data.ranging) {
-          throw new Error("Unexpected data format");
+        debugBox.textContent = JSON.stringify(data, null, 2);
+
+        // Fill store dropdown
+        if (data.stores) {
+          data.stores.forEach(store => {
+            const opt = document.createElement("option");
+            opt.value = store.store;
+            opt.textContent = store.store;
+            storeSelect.appendChild(opt);
+          });
         }
 
-        // Show counts
-        debug.innerText = 
-          `✅ Loaded ${data.deals.length} products from Deals\n` +
-          `✅ Loaded ${data.ranging.length} rows from Ranging`;
-
-        // Populate store dropdown
-        const stores = [...new Set(data.ranging.map(r => r.store))];
-        const storeDropdown = document.getElementById("storeDropdown");
-        storeDropdown.innerHTML = "<option>-- Choose a store --</option>";
-        stores.forEach(store => {
-          let opt = document.createElement("option");
-          opt.value = store;
-          opt.textContent = store;
-          storeDropdown.appendChild(opt);
-        });
+        // Show first 10 products
+        if (data.deals) {
+          data.deals.slice(0, 10).forEach(item => {
+            const div = document.createElement("div");
+            div.style.border = "1px solid #ddd";
+            div.style.margin = "5px 0";
+            div.style.padding = "10px";
+            div.style.borderRadius = "6px";
+            div.innerHTML = `
+              <strong>${item.product}</strong> <br>
+              Code: ${item.code} | SDA: ${item.sda} <br>
+              <img src="${item.image}" alt="${item.product}" style="max-width:100px;margin-top:5px">
+            `;
+            productsDiv.appendChild(div);
+          });
+        }
 
       } catch (err) {
-        debug.innerText = "❌ Error loading: " + err.message;
+        debugBox.textContent = "❌ Error loading: " + err.message;
       }
     }
   </script>
