@@ -63,11 +63,11 @@
 
         merged = [];
         ranging.forEach(row => {
-          const storeName = row["Store"] || row["Store "] || ""; // Column C
+          const storeName = row["Store"] || row["Store "] || "";
           if (!storeName) return;
 
           Object.entries(row).forEach(([key, status]) => {
-            if (["Store ID","Store","Store ","Banner","MSO"].includes(key)) return;
+            if (["Index","Store ID","Store","Store ","Banner","MSO"].includes(key)) return;
             if (!status) return;
 
             const productMeta = deals.find(d => d["Product"] === key);
