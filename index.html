@@ -2,118 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    .store-select { margin-bottom: 20px; }
+    h1 { font-size: 1.5em; }
+    select, button { margin: 10px 0; padding: 5px; }
     .product-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      border: 1px solid #ccc; border-radius: 6px; padding: 10px;
+      margin-bottom: 10px; display: flex; justify-content: space-between;
+      align-items: center; background: #f9f9f9;
     }
-    .product-info { flex-grow: 1; }
-    button {
-      padding: 8px 12px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .offer-btn { background: #007bff; color: white; margin-left: 10px; }
-    .not-btn { background: #dc3545; color: white; margin-left: 10px; }
+    .product-info { flex: 1; margin-left: 10px; }
+    .actions button { margin-left: 5px; }
+    img { width: 50px; height: 50px; object-fit: contain; }
   </style>
 </head>
 <body>
-  <h2>Store Ranging App</h2>
-  <button onclick="loadData()">Refresh</button>
-  <div class="store-select">
-    <label for="storeDropdown">Select a store:</label>
-    <select id="storeDropdown" onchange="renderProducts()">
-      <option value="">-- Choose a store --</option>
-    </select>
-  </div>
-
-  <div id="productList"></div>
+  <h1>Store Ranging App</h1>
+  <button onclick="fetchData()">Refresh</button>
+  <br>
+  <label for="storeSelect">Select a store:</label>
+  <select id="storeSelect" onchange="renderProducts()">
+    <option value="">-- Choose a store --</option>
+  </select>
+  <div id="products"></div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec";
     let allData = [];
 
-    async function loadData() {
+    async function fetchData() {
       try {
         const res = await fetch(API_URL);
         allData = await res.json();
 
-        // Get unique store names
-        const stores = [...new Set(allData.map(row => row.Store))];
-        const dropdown = document.getElementById("storeDropdown");
-        dropdown.innerHTML = `<option value="">-- Choose a store --</option>`;
+        // Normalize and extract store names
+        const stores = [...new Set(allData.map(row => row.Store || row.store))];
+
+        const select = document.getElementById("storeSelect");
+        select.innerHTML = `<option value="">-- Choose a store --</option>`;
         stores.forEach(store => {
-          dropdown.innerHTML += `<option value="${store}">${store}</option>`;
+          if (store) {
+            const opt = document.createElement("option");
+            opt.value = store;
+            opt.textContent = store;
+            select.appendChild(opt);
+          }
         });
       } catch (err) {
-        alert("Error loading data");
-        console.error(err);
+        console.error("Error fetching data", err);
       }
     }
 
     function renderProducts() {
-      const store = document.getElementById("storeDropdown").value;
-      const list = document.getElementById("productList");
-      list.innerHTML = "";
+      const store = document.getElementById("storeSelect").value;
+      const container = document.getElementById("products");
+      container.innerHTML = "";
 
       if (!store) return;
 
-      // Filter products for selected store where Status = "Not Ranging"
-      const products = allData.filter(row => row.Store === store && row.Status === "Not Ranging");
+      const products = allData.filter(row =>
+        (row.Store || row.store) === store &&
+        (row.Status || row.status) === "Not Ranging"
+      );
 
-      if (products.length === 0) {
-        list.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
-        return;
-      }
+      products.forEach(prod => {
+        const productName = prod.Product || prod.product || "Unnamed product";
+        const metcash = prod.MetcashCode || prod.metcashCode || "—";
+        const deal = prod["50% Deal"] || prod.deal || "—";
+        const image = prod["Image URL"] || prod.image || "";
 
-      products.forEach(product => {
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
+          <img src="${image || 'https://via.placeholder.com/50'}" alt="Product">
           <div class="product-info">
-            <strong>${product.Product}</strong><br>
-            Status: ${product.Status}
+            <strong>${productName}</strong><br>
+            Metcash Code: ${metcash}<br>
+            50% Deal: $${deal}
           </div>
-          <div>
-            <button class="offer-btn" onclick="addToOffer('${product.Store}', '${product.Product}')">Add to Offer</button>
-            <button class="not-btn" onclick="markNotBuying('${product.Store}', '${product.Product}')">Not Buying</button>
+          <div class="actions">
+            <button onclick="addToOffer('${store}','${productName}')">Add to Offer</button>
+            <button onclick="notBuying('${store}','${productName}')">Not Buying</button>
           </div>
         `;
-        list.appendChild(card);
+        container.appendChild(card);
       });
     }
 
     async function addToOffer(store, product) {
-      alert(`${product} added to offer for ${store}`);
-      // optional: add POST request back to sheet if needed
+      alert(`Added ${product} from ${store} to offer`);
+      // Hook this to your sheet if needed
     }
 
-    async function markNotBuying(store, product) {
+    async function notBuying(store, product) {
       try {
         await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ Store: store, Product: product, Status: "Not Buying" })
+          body: JSON.stringify({
+            Store: store,
+            Product: product,
+            Status: "Not Buying"
+          })
         });
-        alert(`${product} marked as Not Buying for ${store}`);
-        loadData(); // reload after update
+        alert(`Marked ${product} as Not Buying for ${store}`);
+        fetchData(); // Refresh data
       } catch (err) {
-        console.error("Error updating status:", err);
+        console.error("Error sending Not Buying update", err);
       }
     }
 
-    // Load on startup
-    loadData();
+    // Initial load
+    fetchData();
   </script>
 </body>
 </html>
