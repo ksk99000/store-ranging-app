@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App (Debug)</title>
+  <title>Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .product-card {
@@ -12,75 +13,66 @@
       margin: 10px 0;
       display: flex;
       align-items: flex-start;
+      background: #fafafa;
     }
     .product-card img {
       width: 80px;
       height: 80px;
-      object-fit: cover;
-      margin-right: 10px;
+      object-fit: contain;
+      margin-right: 12px;
     }
     .product-info { flex: 1; }
     .buttons { margin-top: 10px; }
-    button { margin-right: 5px; }
-    pre { background: #f4f4f4; padding: 10px; }
+    button { padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
+    .add { background: #007bff; color: white; }
+    .not { background: #dc3545; color: white; }
+    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; max-height: 250px; overflow-y: auto; }
   </style>
 </head>
 <body>
-  <h1>Store Ranging App (Debug)</h1>
+  <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
-  
-  <div>
-    <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" onchange="renderProducts()">
-      <option value="">-- Choose a store --</option>
-    </select>
-  </div>
+  <br><br>
 
+  <label for="storeSelect">Select a store:</label>
+  <select id="storeSelect" onchange="renderProducts()">
+    <option value="">-- Choose a store --</option>
+  </select>
+
+  <h2>Products</h2>
   <div id="products"></div>
 
   <h2>Debug Output</h2>
   <pre id="debugOutput">Raw JSON will appear here</pre>
 
   <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbxFutUI7R00ma2XpF2lKHr9HLOPl7Nb4aYqt6MpWWuvr2FPCqAk2zuP4w7M6nyVGwQ/exec";
-    let storeData = {};
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxNuHEsrGYVpRrVDqUqfr43oZ1vRltptx7a__4ahKov7T2SJW6WMoAfCHRY8MnX0vjz7w/exec";
+    let allData = [];
 
     async function loadData() {
+      const productsDiv = document.getElementById("products");
+      productsDiv.innerHTML = "Loading...";
       try {
-        const res = await fetch(scriptURL);
-        const data = await res.json();
-        document.getElementById("debugOutput").textContent = JSON.stringify(data, null, 2);
+        const res = await fetch(scriptUrl);
+        const text = await res.text();
+        document.getElementById("debugOutput").textContent = text; // raw debug output
+        allData = JSON.parse(text);
 
-        storeData = {};
-        data.forEach(row => {
-          const { Store, Product, Status, ImageURL, MetcashCode, SDARanking, Category, MetcashLayout, MetcashBaseRange, ListPrice, Deal50 } = row;
-
-          if (Status === "Not Ranging") {
-            if (!storeData[Store]) storeData[Store] = [];
-            storeData[Store].push({
-              Product,
-              ImageURL,
-              MetcashCode,
-              SDARanking,
-              Category,
-              MetcashLayout,
-              MetcashBaseRange,
-              ListPrice,
-              Deal50
-            });
-          }
-        });
-
+        // Build dropdown
+        const stores = [...new Set(allData.map(r => r.Store))].filter(s => s);
         const storeSelect = document.getElementById("storeSelect");
         storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-        Object.keys(storeData).forEach(store => {
+        stores.forEach(store => {
           const opt = document.createElement("option");
           opt.value = store;
           opt.textContent = store;
           storeSelect.appendChild(opt);
         });
+
+        productsDiv.innerHTML = "Select a store to view Not Ranging products.";
       } catch (err) {
-        document.getElementById("debugOutput").textContent = "Error loading data: " + err;
+        productsDiv.innerHTML = "Error loading data: " + err;
+        console.error("Fetch error:", err);
       }
     }
 
@@ -89,25 +81,37 @@
       const container = document.getElementById("products");
       container.innerHTML = "";
 
-      if (!store || !storeData[store]) return;
+      if (!store) return;
 
-      storeData[store].forEach(p => {
+      const products = allData.filter(p =>
+        p.Store === store &&
+        p.Status &&
+        p.Status.toString().trim().toLowerCase() === "not ranging"
+      );
+
+      if (products.length === 0) {
+        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
+        return;
+      }
+
+      products.forEach(p => {
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
-          <img src="${p.ImageURL || 'https://via.placeholder.com/80'}" alt="Product Image">
+          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
           <div class="product-info">
-            <strong>${p.Product}</strong><br>
-            Metcash Code: ${p.MetcashCode || "-"}<br>
-            SDA Ranking: ${p.SDARanking || "-"}<br>
-            Category: ${p.Category || "-"}<br>
-            Metcash Layout: ${p.MetcashLayout || "-"}<br>
-            Metcash Base Range: ${p.MetcashBaseRange || "-"}<br>
-            List Price: ${p.ListPrice || "-"}<br>
-            50% Deal: ${p.Deal50 || "-"}<br>
+            <p><strong>${p.Product || '-'}</strong></p>
+            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
+            <p>Category: ${p['Category'] || '-'}</p>
+            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
+            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
+            <p>List Price: ${p['List Price'] || '-'}</p>
+            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+            <p>Status: ${p['Status'] || '-'}</p>
             <div class="buttons">
-              <button onclick="addToOffer('${p.Product}')">Add to Offer</button>
-              <button onclick="notBuying('${p.Product}')">Not Buying</button>
+              <button class="add" onclick="updateStatus('${p.Store}','${p.Product}','Offer')">Add to Offer</button>
+              <button class="not" onclick="updateStatus('${p.Store}','${p.Product}','Not Buying')">Not Buying</button>
             </div>
           </div>
         `;
@@ -115,12 +119,18 @@
       });
     }
 
-    function addToOffer(product) {
-      alert(`Added to offer: ${product}`);
-    }
-
-    function notBuying(product) {
-      alert(`Marked as not buying: ${product}`);
+    async function updateStatus(store, product, status) {
+      try {
+        await fetch(scriptUrl, {
+          method: "POST",
+          body: JSON.stringify({ Store: store, Product: product, Status: status }),
+          headers: { "Content-Type": "application/json" }
+        });
+        alert(`Updated: ${product} → ${status}`);
+        loadData(); // reload after update
+      } catch (err) {
+        alert("Update failed: " + err);
+      }
     }
 
     loadData();
