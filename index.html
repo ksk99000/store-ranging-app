@@ -9,7 +9,7 @@
     h1 { font-size: 24px; }
     select, button { padding: 8px; margin: 5px 0; }
     .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; display: none; }
-    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; }
+    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor:pointer; }
     .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
     .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
     .buttons { margin-left: auto; }
@@ -25,6 +25,11 @@
     .toggle-btn { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 4px; margin-right: 5px; }
     .toggle-btn.active { background: #007bff; color: white; }
     #viewToggleSwitch { margin-left: 10px; background:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; }
+    /* Modal */
+    #storeModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; }
+    #storeModalContent { background:#fff; padding:20px; border-radius:8px; max-width:500px; max-height:80%; overflow:auto; }
+    #storeModal h3 { margin-top:0; }
   </style>
 </head>
 <body>
@@ -59,6 +64,14 @@
     <div id="dashboardContent"></div>
   </div>
 
+  <!-- Modal -->
+  <div id="storeModal">
+    <div id="storeModalContent">
+      <h3 id="modalTitle">Stores Not Ranging</h3>
+      <ul id="storeList"></ul>
+    </div>
+  </div>
+
   <div>
     <h3>Raw JSON Debug Output</h3>
     <div id="debug">Waiting for data...</div>
@@ -69,7 +82,7 @@
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
-    let currentMode = "dashboard"; // "dashboard" or "store"
+    let currentMode = "dashboard";
 
     async function loadData() {
       try {
@@ -82,7 +95,7 @@
 
         populateStores();
         resetSummary();
-        showDashboard(); // Default landing view
+        showDashboard();
       } catch (err) {
         document.getElementById("debug").textContent = "Error fetching data: " + err;
       }
@@ -199,23 +212,9 @@
         mainLine.appendChild(nameEl);
         mainLine.appendChild(btnDiv);
 
-        const detailsDiv = document.createElement("div");
-        detailsDiv.className = "details";
-        detailsDiv.innerHTML = `
-          Metcash Code: ${p['Metcash Code'] || '-'}<br>
-          SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
-          Category: ${p['Category'] || '-'}<br>
-          Layout: ${p['Metcash Layout'] || '-'}<br>
-          Base Range: ${p['Metcash Base Range'] || '-'}<br>
-          List Price: ${p['List Price'] || '-'}<br>
-          50% Deal: ${p['50% Deal'] || '-'}<br>
-          Status: ${p['Status'] || '-'}
-        `;
-
         const rightDiv = document.createElement("div");
         rightDiv.style.flex = "1";
         rightDiv.appendChild(mainLine);
-        rightDiv.appendChild(detailsDiv);
 
         card.appendChild(img);
         card.appendChild(rightDiv);
@@ -341,6 +340,12 @@
 
         card.appendChild(img);
         card.appendChild(rightDiv);
+
+        // click opens modal
+        card.onclick = () => {
+          showStoreModal(g.product.Product);
+        };
+
         container.appendChild(card);
       });
     }
@@ -356,6 +361,40 @@
         showDashboard();
       }
     }
+
+    function showStoreModal(productName) {
+      const modal = document.getElementById("storeModal");
+      const title = document.getElementById("modalTitle");
+      const list = document.getElementById("storeList");
+
+      title.textContent = `Stores Not Ranging: ${productName}`;
+      list.innerHTML = "";
+
+      const stores = allData
+        .filter(item => item.Product === productName && String(item.Status).trim().toLowerCase() === "not ranging")
+        .map(item => item.Store);
+
+      if (stores.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No stores found.";
+        list.appendChild(li);
+      } else {
+        stores.forEach(s => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          list.appendChild(li);
+        });
+      }
+
+      modal.style.display = "flex";
+    }
+
+    // close modal when clicking outside
+    document.getElementById("storeModal").addEventListener("click", function(e) {
+      if (e.target.id === "storeModal") {
+        this.style.display = "none";
+      }
+    });
 
     loadData();
   </script>
