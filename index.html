@@ -8,13 +8,7 @@
     body { font-family: Arial, sans-serif; padding: 20px; }
     h1 { font-size: 24px; }
     select, button { padding: 8px; margin: 5px 0; }
-    .summary { 
-      background: #eef; 
-      padding: 10px; 
-      border: 1px solid #ccd; 
-      margin-bottom: 15px; 
-      display: none; /* hidden by default */
-    }
+    .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; display: none; }
     .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; align-items: center; cursor: pointer; }
     .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
     .main-line { display: flex; align-items: center; justify-content: space-between; flex: 1; }
@@ -26,6 +20,9 @@
     #products { margin-top: 20px; }
     #offerList { margin-top: 10px; padding-left: 20px; }
     #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
+    .toggle-group { margin: 10px 0; }
+    .toggle-btn { padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 4px; margin-right: 5px; }
+    .toggle-btn.active { background: #007bff; color: white; }
   </style>
 </head>
 <body>
@@ -38,6 +35,11 @@
     <select id="storeSelect" onchange="renderProducts()">
       <option value="">-- Choose a store --</option>
     </select>
+  </div>
+
+  <div class="toggle-group" id="viewToggle" style="display:none;">
+    <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">Not Ranging</button>
+    <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">Ranging</button>
   </div>
 
   <div id="summary" class="summary">
@@ -56,6 +58,7 @@
     const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
     let allData = [];
     let selectedDeals = {};
+    let currentView = "not ranging";
 
     async function loadData() {
       try {
@@ -91,22 +94,31 @@
       updateSummary();
     }
 
+    function setView(view) {
+      currentView = view;
+      document.getElementById("btnNotRanging").classList.toggle("active", view === "not ranging");
+      document.getElementById("btnRanging").classList.toggle("active", view === "ranging");
+      renderProducts();
+    }
+
     function renderProducts() {
       const storeName = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
       const summaryBox = document.getElementById("summary");
+      const toggleGroup = document.getElementById("viewToggle");
 
       container.innerHTML = "";
-
       if (!storeName) {
-        summaryBox.style.display = "none"; // hide when no store selected
+        summaryBox.style.display = "none";
+        toggleGroup.style.display = "none";
         return;
       } else {
-        summaryBox.style.display = "block"; // show when store is chosen
+        summaryBox.style.display = "block";
+        toggleGroup.style.display = "block";
       }
 
       const filtered = allData.filter(item => 
-        item.Store === storeName && String(item.Status).trim().toLowerCase() === "not ranging"
+        item.Store === storeName && String(item.Status).trim().toLowerCase() === currentView
       );
 
       if (filtered.length === 0) {
