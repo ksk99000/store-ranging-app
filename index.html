@@ -6,149 +6,115 @@
   <title>📱 Store Ranging App</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f8fafc;
-      color: #333;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f7f9fc;
+      margin: 0;
+      padding: 0;
     }
-    h1 {
-      color: #0056d6;
+    header {
+      background: #007bff;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    .version {
+      font-size: 12px;
+      color: #ddd;
+      margin-top: 4px;
+    }
+    .container {
+      padding: 15px;
     }
     button {
       background: #007bff;
-      color: white;
       border: none;
+      color: white;
       padding: 10px 15px;
-      margin: 5px;
       border-radius: 6px;
-      cursor: pointer;
       font-size: 14px;
+      cursor: pointer;
+      margin-right: 10px;
     }
     button:hover {
       background: #0056b3;
     }
     select {
       padding: 8px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+      font-size: 14px;
     }
-    .product {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      margin: 10px 0;
-      display: flex;
-      align-items: center;
-      background: #fff;
-    }
-    .product img {
-      width: 80px;
-      height: 80px;
-      margin-right: 15px;
-      border-radius: 5px;
-      object-fit: cover;
-    }
-    .product-info {
-      flex: 1;
-    }
-    .version {
-      position: fixed;
-      top: 10px;
-      right: 15px;
-      font-size: 12px;
-      font-weight: bold;
-      color: #666;
-      background: #eef2f7;
-      padding: 3px 8px;
-      border-radius: 6px;
+    h2 {
+      margin-top: 20px;
     }
     .debug {
-      font-size: 12px;
-      color: #555;
-      margin-top: 15px;
-      background: #f1f3f6;
-      padding: 8px;
+      background: #fff3cd;
+      padding: 10px;
+      border: 1px solid #ffeeba;
       border-radius: 6px;
+      margin-top: 15px;
+      font-family: monospace;
       white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <div class="version">v1.0.0</div>
+  <header>
+    📱 Store Ranging App
+    <div class="version">Version: v1.1.0 (17 Sept 2025)</div>
+  </header>
+  
+  <div class="container">
+    <button onclick="loadData()">🔄 Refresh</button>
+    <select id="storeDropdown">
+      <option>-- Choose a store --</option>
+    </select>
 
-  <h1>📱 Store Ranging App</h1>
-  <button onclick="loadData()">🔄 Refresh</button>
-  <select id="storeSelect" onchange="filterByStore()">
-    <option value="">-- Choose a store --</option>
-  </select>
+    <h2>Products</h2>
+    <div id="productList"></div>
 
-  <h2>Products</h2>
-  <div id="productList"></div>
-
-  <h3>🛠 Debug Output</h3>
-  <div class="debug" id="debugOutput">Waiting for data...</div>
+    <h2>🛠 Debug Output</h2>
+    <div id="debug" class="debug"></div>
+  </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbw2a7r1uV7_WdypuPWlR0TNsv_8dlp70naBfdcAnA6xzKWFD6nwrx9gyP3YdVsMUGUchQ/exec";
-
-    let allData = { ranging: [] };
+    const API_URL = "https://script.google.com/macros/s/AKfycbwuCYVCM0Ix_Wy2czkcQ8Wnv8eAD1Wkx6yQJaK8dGmwNwEXnXsHWRT0uGPCka38wUbM8w/exec";
 
     async function loadData() {
-      document.getElementById("debugOutput").textContent = "Loading...";
+      const debug = document.getElementById("debug");
+      debug.innerText = "Loading data...";
+
       try {
         const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Network error: " + response.status);
+        
         const data = await response.json();
-        allData = data;
 
-        document.getElementById("debugOutput").textContent = 
-          `Loaded ${data.ranging?.length || 0} ranging rows & ${data.products?.length || 0} products.`;
+        // Check structure
+        if (!data.deals || !data.ranging) {
+          throw new Error("Unexpected data format");
+        }
 
-        populateStores(data.ranging || []);
+        // Show counts
+        debug.innerText = 
+          `✅ Loaded ${data.deals.length} products from Deals\n` +
+          `✅ Loaded ${data.ranging.length} rows from Ranging`;
+
+        // Populate store dropdown
+        const stores = [...new Set(data.ranging.map(r => r.store))];
+        const storeDropdown = document.getElementById("storeDropdown");
+        storeDropdown.innerHTML = "<option>-- Choose a store --</option>";
+        stores.forEach(store => {
+          let opt = document.createElement("option");
+          opt.value = store;
+          opt.textContent = store;
+          storeDropdown.appendChild(opt);
+        });
+
       } catch (err) {
-        document.getElementById("debugOutput").textContent = "Error loading: " + err;
+        debug.innerText = "❌ Error loading: " + err.message;
       }
     }
-
-    function populateStores(rangingData) {
-      const storeSelect = document.getElementById("storeSelect");
-      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(rangingData.map(r => r.Store))];
-      stores.forEach(store => {
-        const opt = document.createElement("option");
-        opt.value = store;
-        opt.textContent = store;
-        storeSelect.appendChild(opt);
-      });
-    }
-
-    function filterByStore() {
-      const store = document.getElementById("storeSelect").value;
-      const productList = document.getElementById("productList");
-      productList.innerHTML = "";
-      if (!store) return;
-
-      const products = allData.ranging.filter(r => r.Store === store);
-      if (products.length === 0) {
-        productList.innerHTML = "<p>No products found for this store.</p>";
-        return;
-      }
-
-      products.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "product";
-        div.innerHTML = `
-          <img src="${p['Image URL'] || ''}" alt="product">
-          <div class="product-info">
-            <strong>${p.Product}</strong><br>
-            Status: ${p.Status || "Unknown"}
-          </div>
-        `;
-        productList.appendChild(div);
-      });
-    }
-
-    loadData();
   </script>
 </body>
 </html>
