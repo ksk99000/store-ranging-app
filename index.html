@@ -12,17 +12,22 @@
       padding: 10px;
       margin: 10px 0;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       background: #fafafa;
+      justify-content: space-between;
     }
     .product-card img {
-      width: 80px;
-      height: 80px;
+      width: 60px;
+      height: 60px;
       object-fit: contain;
       margin-right: 12px;
     }
-    .product-info { flex: 1; }
-    .buttons { margin-top: 10px; }
+    .product-name {
+      font-weight: bold;
+      color: #007bff;
+      cursor: pointer;
+    }
+    .buttons { margin-left: 15px; }
     button { padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
     .add { background: #007bff; color: white; }
     .add.added { background: #28a745; } /* green when added */
@@ -33,6 +38,24 @@
       padding: 12px;
       margin: 20px 0;
       border-radius: 6px;
+    }
+    /* Popup modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 6px;
+      max-width: 400px;
+      width: 90%;
     }
   </style>
 </head>
@@ -55,6 +78,11 @@
 
   <h2>Products</h2>
   <div id="products"></div>
+
+  <!-- Popup modal -->
+  <div id="modal" class="modal" onclick="closeModal(event)">
+    <div id="modalContent" class="modal-content"></div>
+  </div>
 
   <script>
     const scriptUrl = "https://script.google.com/macros/s/AKfycbxNuHEsrGYVpRrVDqUqfr43oZ1vRltptx7a__4ahKov7T2SJW6WMoAfCHRY8MnX0vjz7w/exec";
@@ -110,19 +138,8 @@
 
         const card = document.createElement("div");
         card.className = "product-card";
-
         card.innerHTML = `
-          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
-          <div class="product-info">
-            <p><strong>${p.Product || '-'}</strong></p>
-            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
-            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
-            <p>Category: ${p['Category'] || '-'}</p>
-            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
-            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
-            <p>List Price: ${p['List Price'] || '-'}</p>
-            <p>50% Deal: ${dealValue ? '$' + dealValue.toFixed(2) : '-'}</p>
-          </div>
+          <span class="product-name" onclick="showDetails(${JSON.stringify(p).replace(/"/g, '&quot;')})">${p.Product || '-'}</span>
           <div class="buttons">
             <button class="add ${isSelected ? 'added' : ''}" onclick="toggleOffer(this,'${p.Product}','${dealValue}')">
               ${isSelected ? 'Added' : 'Add to Offer'}
@@ -137,12 +154,10 @@
     function toggleOffer(btn, product, dealValue) {
       const existing = selectedDeals.find(d => d.product === product);
       if (existing) {
-        // remove
         selectedDeals = selectedDeals.filter(d => d.product !== product);
         btn.classList.remove("added");
         btn.textContent = "Add to Offer";
       } else {
-        // add
         selectedDeals.push({ product, dealValue: parseFloat(dealValue) || 0 });
         btn.classList.add("added");
         btn.textContent = "Added";
@@ -153,7 +168,7 @@
     function removeFromOffer(product) {
       selectedDeals = selectedDeals.filter(d => d.product !== product);
       updateOfferSummary();
-      renderProducts(); // refresh buttons
+      renderProducts();
     }
 
     function updateOfferSummary() {
@@ -167,7 +182,6 @@
       }
 
       summaryDiv.style.display = "block";
-
       const total = selectedDeals.reduce((sum, d) => sum + d.dealValue, 0);
       totalValueEl.textContent = "Total: $" + total.toFixed(2);
 
@@ -177,6 +191,31 @@
         li.textContent = `${d.product} — $${d.dealValue.toFixed(2)}`;
         listEl.appendChild(li);
       });
+    }
+
+    function showDetails(product) {
+      const modal = document.getElementById("modal");
+      const modalContent = document.getElementById("modalContent");
+      modal.style.display = "flex";
+      modalContent.innerHTML = `
+        <h3>${product.Product || '-'}</h3>
+        <img src="${product['Image URL'] || 'https://via.placeholder.com/100'}" alt="Product" style="width:100px; height:100px; object-fit:contain;">
+        <p>Metcash Code: ${product['Metcash Code'] || '-'}</p>
+        <p>SDA Ranking: ${product['SDA Ranking'] || '-'}</p>
+        <p>Category: ${product['Category'] || '-'}</p>
+        <p>Layout: ${product['Metcash Layout'] || '-'}</p>
+        <p>Base Range: ${product['Metcash Base Range'] || '-'}</p>
+        <p>List Price: ${product['List Price'] || '-'}</p>
+        <p>50% Deal: ${product['50% Deal'] || '-'}</p>
+        <p>Status: ${product['Status'] || '-'}</p>
+      `;
+    }
+
+    function closeModal(event) {
+      const modal = document.getElementById("modal");
+      if (event.target.id === "modal") {
+        modal.style.display = "none";
+      }
     }
 
     loadData();
