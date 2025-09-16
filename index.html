@@ -2,139 +2,205 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { font-size: 20px; }
-    select, button { padding: 5px; margin: 5px 0; }
-    .card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      margin: 10px 0;
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-    }
-    .card img {
-      width: 60px; height: 60px;
-      margin-right: 10px;
-      background: #eee;
-    }
-    .details { flex-grow: 1; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 24px; }
+    select, button { padding: 8px; margin: 5px 0; }
+    .summary { background: #eef; padding: 10px; border: 1px solid #ccd; margin-bottom: 15px; }
+    .card { border: 1px solid #ccc; border-radius: 8px; margin: 10px 0; padding: 10px; display: flex; cursor: pointer; }
+    .card img { width: 80px; height: 80px; object-fit: contain; margin-right: 15px; background: #f8f8f8; }
+    .details { display: none; flex-direction: column; flex: 1; }
     .buttons { margin-top: 10px; }
-    .add { background: blue; color: white; padding: 5px 10px; border: none; border-radius: 4px; }
+    .add { background: blue; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
     .add.added { background: green; }
-    .not { background: red; color: white; padding: 5px 10px; border: none; border-radius: 4px; }
-    .hidden { display: none; }
-    #summary { background: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 6px; }
-    #debug { white-space: pre-wrap; font-size: 12px; background: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+    .not { background: red; color: white; padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+    #products { margin-top: 20px; }
+    #debug { white-space: pre-wrap; background: #fafafa; border: 1px solid #ddd; padding: 10px; margin-top: 20px; font-size: 12px; }
   </style>
 </head>
 <body>
+
   <h1>Store Ranging App</h1>
   <button onclick="loadData()">Refresh</button>
+
   <div>
     <label for="storeSelect">Select a store:</label>
     <select id="storeSelect" onchange="renderProducts()">
       <option value="">-- Choose a store --</option>
     </select>
   </div>
-  <div id="summary"><b>Total Deal Offer Summary</b><br>$<span id="total">0.00</span></div>
-  <h2>Products</h2>
-  <div id="products"></div>
-  <h3>Raw JSON Debug Output</h3>
-  <div id="debug">Debug will appear here</div>
+
+  <div class="summary">
+    <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
+  </div>
+
+  <div id="products">
+    <!-- Product cards will go here -->
+  </div>
+
+  <div>
+    <h3>Raw JSON Debug Output</h3>
+    <div id="debug">Waiting for data...</div>
+  </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbxq52zb8fyUOcYjE4yDXcrKgSYeKn6b78nR0rCPtErII7IvmaGEHV0zvxB4LnR_huABUw/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
     let allData = [];
-    let selectedStore = "";
     let total = 0;
 
     async function loadData() {
       try {
-        document.getElementById("debug").textContent = "Loading...";
-        const res = await fetch(scriptUrl);
-        const json = await res.json();
-        allData = json.filter(item => item.Status === "Not Ranging"); // only not ranging
+        document.getElementById("debug").textContent = "Loading data...";
+        const resp = await fetch(scriptUrl);
+        const json = await resp.json();
+        // Save filtered data or all depending on your logic
+        allData = json;  
+
         document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
 
-        // populate stores
-        const stores = [...new Set(allData.map(r => r.Store))];
-        const select = document.getElementById("storeSelect");
-        select.innerHTML = '<option value="">-- Choose a store --</option>';
-        stores.forEach(s => {
-          const opt = document.createElement("option");
-          opt.value = s; opt.textContent = s;
-          select.appendChild(opt);
-        });
-
+        populateStores();
+        resetSummary();
+        renderProducts();
       } catch (err) {
-        document.getElementById("debug").textContent = "Error loading: " + err;
+        document.getElementById("debug").textContent = "Error fetching data: " + err;
       }
     }
 
+    function populateStores() {
+      const select = document.getElementById("storeSelect");
+      // Clear previous options
+      select.innerHTML = '<option value="">-- Choose a store --</option>';
+      const stores = [...new Set(allData.map(d => d.Store))].sort();
+      stores.forEach(storeName => {
+        const opt = document.createElement("option");
+        opt.value = storeName;
+        opt.textContent = storeName;
+        select.appendChild(opt);
+      });
+    }
+
+    function resetSummary() {
+      total = 0;
+      document.getElementById("total").textContent = total.toFixed(2);
+    }
+
     function renderProducts() {
-      selectedStore = document.getElementById("storeSelect").value;
+      const storeName = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
       container.innerHTML = "";
-      const data = allData.filter(r => r.Store === selectedStore);
-      if (!data.length) {
+
+      if (!storeName) {
+        container.textContent = "Please select a store.";
+        return;
+      }
+
+      // Filter data: matching store AND status "Not Ranging"
+      const filtered = allData.filter(item => 
+        item.Store === storeName && String(item.Status).trim().toLowerCase() === "not ranging"
+      );
+
+      if (filtered.length === 0) {
         container.textContent = "No products found.";
         return;
       }
-      data.forEach(p => {
+
+      filtered.forEach(p => {
         const card = document.createElement("div");
         card.className = "card";
-        card.innerHTML = `
-          <img src="${p['Image URL'] || ''}" alt="Product">
-          <div class="details hidden">
-            <b>${p['Product']}</b><br>
-            Metcash Code: ${p['Metcash Code'] || '-'}<br>
-            SDA Ranking: ${p['SDA Ranking'] || '-'}<br>
-            Category: ${p['Category'] || '-'}<br>
-            Layout: ${p['Metcash Layout'] || '-'}<br>
-            Base Range: ${p['Metcash Base Range'] || '-'}<br>
-            List Price: ${p['List Price'] || '-'}<br>
-            50% Deal: ${p['50% Deal'] || '-'}<br>
-            Status: ${p['Status'] || '-'}
-            <div class="buttons">
-              <button class="add" onclick="toggleOffer(this, '${p['Product']}', '${p['List Price']}')">Add to Offer</button>
-              <button class="not" onclick="removeProduct(this, '${p['Product']}')">Not Buying</button>
-            </div>
-          </div>
+
+        const img = document.createElement("img");
+        img.src = p["Image URL"] || "";  // fallback if empty
+        img.alt = p.Product || "Product";
+
+        const detailsDiv = document.createElement("div");
+        detailsDiv.className = "details";
+
+        // Add product text
+        const nameEl = document.createElement("strong");
+        nameEl.textContent = p.Product || "-";
+
+        // Build HTML inner for details
+        let inner = `
+          <div>${p["Metcash Code"] || "-"} <br>
+          ${p["SDA Ranking"] || "-"} <br>
+          ${p["Category"] || "-"} <br>
+          ${p["Metcash Layout"] || "-"} <br>
+          ${p["Metcash Base Range"] || "-"} <br>
+          List Price: ${p["List Price"] || "-"} <br>
+          50% Deal: ${p["50% Deal"] || "-"} <br>
+          Status: ${p["Status"] || "-"}</div>
         `;
+        detailsDiv.innerHTML = inner;
+
+        // Buttons
+        const btnDiv = document.createElement("div");
+        btnDiv.className = "buttons";
+
+        const btnAdd = document.createElement("button");
+        btnAdd.className = "add";
+        btnAdd.textContent = "Add to Offer";
+        btnAdd.onclick = function(e) {
+          e.stopPropagation();
+          toggleOffer(btnAdd, p);
+        };
+
+        const btnNot = document.createElement("button");
+        btnNot.className = "not";
+        btnNot.textContent = "Not Buying";
+        btnNot.onclick = function(e) {
+          e.stopPropagation();
+          removeProduct(card, p);
+        };
+
+        btnDiv.appendChild(btnAdd);
+        btnDiv.appendChild(btnNot);
+
+        detailsDiv.appendChild(btnDiv);
+
+        card.appendChild(img);
+        const rightDiv = document.createElement("div");
+        rightDiv.style.flex = "1";
+        rightDiv.appendChild(nameEl);
+        rightDiv.appendChild(detailsDiv);
+        card.appendChild(rightDiv);
+
         card.onclick = function(e) {
+          // toggle details visibility unless clicked a button
           if (!e.target.classList.contains("add") && !e.target.classList.contains("not")) {
-            card.querySelector(".details").classList.toggle("hidden");
+            detailsDiv.style.display = (detailsDiv.style.display === "flex" ? "none" : "flex");
           }
         };
+
         container.appendChild(card);
       });
     }
 
-    function toggleOffer(btn, product, price) {
-      let val = parseFloat(price.replace(/[^0-9.]/g, "")) || 0;
+    function toggleOffer(btn, productObj) {
       if (btn.classList.contains("added")) {
         btn.classList.remove("added");
         btn.textContent = "Add to Offer";
+        // subtract from total
+        const val = parseFloat(productObj["List Price"]) || 0;
         total -= val;
       } else {
         btn.classList.add("added");
         btn.textContent = "Added";
+        const val = parseFloat(productObj["List Price"]) || 0;
         total += val;
       }
       document.getElementById("total").textContent = total.toFixed(2);
     }
 
-    function removeProduct(btn, product) {
-      btn.closest(".card").remove();
-      // optionally send update back to script (POST)
+    function removeProduct(cardElem, productObj) {
+      cardElem.remove();
+      // Optionally send update back to script about status change
     }
 
+    // Initial load
     loadData();
+
   </script>
 </body>
 </html>
