@@ -2,137 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App (with Debug)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
-    select, button { margin: 10px 0; padding: 5px; }
     .product-card {
-      border: 1px solid #ccc; border-radius: 6px; padding: 10px;
-      margin-bottom: 10px; display: flex; justify-content: space-between;
-      align-items: center; background: #f9f9f9;
+      border: 1px solid #ddd; padding: 10px; margin: 10px 0;
+      border-radius: 5px; display: flex; justify-content: space-between;
+      align-items: center;
     }
-    .product-info { flex: 1; margin-left: 10px; }
-    .actions button { margin-left: 5px; }
-    #debug {
-      margin-top: 30px;
-      padding: 10px;
-      border: 1px solid #ddd;
-      background: #f4f4f4;
-      white-space: pre-wrap;
-      max-height: 300px;
-      overflow-y: auto;
-      font-size: 12px;
+    .product-info { flex: 1; }
+    button {
+      padding: 5px 10px; border: none; border-radius: 5px;
+      cursor: pointer; background-color: #007bff; color: white;
     }
+    button:hover { background-color: #0056b3; }
+    #debug { margin-top: 20px; white-space: pre-wrap; background: #f8f9fa; padding: 10px; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
-  <button onclick="fetchData()">Refresh</button>
-  <br>
+  <button onclick="loadData()">Refresh</button>
+  <br><br>
+
   <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="renderProducts()">
+  <select id="storeSelect" onchange="filterByStore()">
     <option value="">-- Choose a store --</option>
   </select>
-  <div id="products"></div>
+
+  <div id="productList"></div>
 
   <h2>Debug Output</h2>
   <div id="debug">Raw JSON will appear here</div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec";
+    const apiUrl = "https://script.google.com/macros/s/AKfycbwZBkRpAIrRVNZ5mt-g_AX7_OjOd3-bTwAwBEihMMYLRlkBEiX9f8f566NAXZEyZMND/exec";
     let allData = [];
 
-    async function fetchData() {
+    async function loadData() {
       try {
-        const res = await fetch(API_URL);
-        allData = await res.json();
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+        allData = data;
 
-        // Show raw JSON in debug panel
-        document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
+        document.getElementById("debug").innerText = JSON.stringify(data, null, 2);
 
-        // Get unique store names
-        const stores = [...new Set(allData.map(row => row.Store || row.store))];
-
-        const select = document.getElementById("storeSelect");
-        select.innerHTML = `<option value="">-- Choose a store --</option>`;
-        stores.forEach(store => {
-          if (store) {
-            const opt = document.createElement("option");
-            opt.value = store;
-            opt.textContent = store;
-            select.appendChild(opt);
-          }
+        // Populate store dropdown
+        const storeSelect = document.getElementById("storeSelect");
+        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+        const uniqueStores = [...new Set(data.map(row => row.Store))];
+        uniqueStores.forEach(store => {
+          const option = document.createElement("option");
+          option.value = store;
+          option.textContent = store;
+          storeSelect.appendChild(option);
         });
-      } catch (err) {
-        console.error("Error fetching data", err);
-        alert("Failed to load data");
+      } catch (error) {
+        document.getElementById("debug").innerText = "Error: " + error;
       }
     }
 
-    function renderProducts() {
-      const store = document.getElementById("storeSelect").value;
-      const container = document.getElementById("products");
-      container.innerHTML = "";
+    function filterByStore() {
+      const selectedStore = document.getElementById("storeSelect").value;
+      const filtered = allData.filter(row => row.Store === selectedStore && row.Status === "Not Ranging");
 
-      if (!store) return;
-
-      const products = allData.filter(row =>
-        (row.Store || row.store) === store &&
-        (row.Status || row.status) === "Not Ranging"
-      );
-
-      if (products.length === 0) {
-        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
-        return;
-      }
-
-      products.forEach(prod => {
-        const productName = prod.Product || prod.product || "Unnamed";
-        const status = prod.Status || prod.status || "—";
-        const metcash = prod["Metcash Code"] || prod.metcash || "—";
-        const deal = prod["50% Deal"] || prod.deal || "—";
-        const image = prod["Image URL"] || prod.image || "https://via.placeholder.com/50";
-
+      const productList = document.getElementById("productList");
+      productList.innerHTML = "";
+      filtered.forEach(row => {
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
           <div class="product-info">
-            <strong>${productName}</strong><br>
-            Status: ${status}<br>
-            Metcash Code: ${metcash}<br>
-            50% Deal: $${deal}
+            <strong>${row.Product}</strong><br>
+            Status: ${row.Status}
           </div>
-          <div class="actions">
-            <button onclick="addToOffer('${store}','${productName}')">Add to Offer</button>
-            <button onclick="markNotBuying('${store}','${productName}')">Not Buying</button>
-          </div>
+          <button onclick="addToOffer('${row.Product}')">Add to Offer</button>
         `;
-        container.appendChild(card);
+        productList.appendChild(card);
       });
     }
 
-    async function addToOffer(store, product) {
-      alert(`${product} added to offer for ${store}`);
+    function addToOffer(product) {
+      alert(product + " added to offer (future: send to Google Sheet)");
     }
 
-    async function markNotBuying(store, product) {
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ Store: store, Product: product, Status: "Not Buying" })
-        });
-        alert(`${product} marked as Not Buying for ${store}`);
-        fetchData(); // reload data after update
-      } catch (err) {
-        console.error("Error updating status", err);
-        alert("Failed to update sheet");
-      }
-    }
-
-    // Initial load
-    fetchData();
+    // Load initial data
+    loadData();
   </script>
 </body>
 </html>
