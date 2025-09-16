@@ -1,288 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Store Ranging App - iOS 26 Theme</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,sans-serif;padding:20px;background:linear-gradient(135deg,#fdfdfd,#f5f9ff);color:#1c1c1e}
-    h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#007aff}
-    button,select{padding:10px 14px;margin:6px 4px 6px 0;border-radius:12px;border:none;font-size:15px;font-weight:500;cursor:pointer;transition:all .2s}
-    button{background:#007aff;color:#fff}
-    button:hover{background:#0063cc}
-    select{background:#fff;border:1px solid #ccc}
-
-    .card{border-radius:16px;margin:10px 0;padding:14px;display:flex;align-items:center;gap:12px;backdrop-filter:blur(20px);box-shadow:0 4px 8px rgba(0,0,0,.06);cursor:pointer;transition:transform .2s,box-shadow .2s;background:rgba(255,255,255,.9)}
-    .card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,.1)}
-    .card img{width:70px;height:70px;object-fit:contain;border-radius:12px;background:#f2f2f7;flex-shrink:0}
-    .card.not-ranging{background:#ffecec}
-    .card.not-buying{background:#fff4e5}
-    .card.ranging{background:#ecffec}
-
-    .add{background:#007aff;color:#fff}
-    .add.added{background:#34c759}
-    .not{background:#ff3b30;color:#fff}
-    .restore{background:#ff9500;color:#fff}
-
-    .summary{background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:16px;box-shadow:0 4px 8px rgba(0,0,0,.06);margin:15px 0;display:none;border-left:5px solid #007aff}
-
-    .toggle-group{display:flex;background:#e5e5ea;border-radius:10px;padding:2px;width:fit-content;margin:10px 0}
-    .toggle-btn{flex:1;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#007aff;font-weight:600;cursor:pointer;transition:all .2s}
-    .toggle-btn.active{background:#fff;color:#007aff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
-
-    #storeModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.35);align-items:flex-end;justify-content:center}
-    #storeModalContent{background:#fff;width:100%;max-height:60%;border-top-left-radius:20px;border-top-right-radius:20px;padding:20px;overflow:auto;animation:slideUp .25s ease;box-shadow:0 -2px 10px rgba(0,0,0,.15)}
-    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-
-    #debug{background:#fff;border-radius:12px;padding:12px;font-size:12px;margin-top:20px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08);white-space:pre-wrap}
-
-    .pill-red{background:#ff3b30}.pill-orange{background:#ff9500}.pill-green{background:#34c759}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Store Ranging App</title>
+<style>
+  :root{
+    --ios-bg:#f6f8fb;
+    --card:#ffffff;
+    --ink:#0a2540;
+    --muted:#6b7a90;
+    --blue:#147aff;
+    --green:#12b886;
+    --red:#ff4d4f;
+    --orange:#ff9f1a;
+    --border:#e6ebf2;
+    --chip:#ecf2ff;
+  }
+  html,body{margin:0;background:var(--ios-bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:16px}
+  h1{display:flex;gap:10px;align-items:center;font-weight:800;margin:8px 0 14px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 16px}
+  .btn{appearance:none;border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:700;padding:12px 16px;display:inline-flex;gap:10px;align-items:center;box-shadow:0 6px 16px rgba(20,122,255,.18)}
+  .btn.secondary{background:#eef4ff;color:#214b9f;box-shadow:none}
+  .select{width:100%;max-width:600px;display:block;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff}
+  .panel{background:#eef6ff;border-radius:14px;padding:14px 16px;margin:14px 0}
+  .cards{display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;grid-template-columns:84px 1fr;gap:14px;align-items:center}
+  .thumb{width:84px;height:84px;border-radius:12px;background:#eef1f6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .title{font-weight:800;margin:0 0 2px}
+  .meta{color:var(--muted);margin:6px 0 0;font-size:14px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .chip-toggle{display:flex;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .chip-toggle button{border:0;background:transparent;padding:10px 16px;font-weight:700;color:var(--muted)}
+  .chip-toggle button.active{background:#f2f6ff;color:#1b4de4}
+  .pill{height:12px;background:#e9eef7;border-radius:999px;overflow:hidden}
+  .pill > span{display:block;height:100%}
+  .dots{display:flex;gap:14px;margin-top:8px}
+  .dot{display:flex;align-items:center;gap:6px;color:#223; font-weight:700}
+  .dot i{display:inline-block;width:14px;height:14px;border-radius:50%}
+  .dot.red i{background:var(--red)}
+  .dot.orange i{background:var(--orange)}
+  .dot.green i{background:var(--green)}
+  details{margin-top:8px}
+  summary{cursor:pointer;color:#2d4; font-weight:700}
+  pre{white-space:pre-wrap;background:#fff;border:1px solid var(--border);padding:10px;border-radius:10px}
+  .hidden{display:none !important}
+</style>
 </head>
 <body>
+<div class="wrap">
   <h1>📱 Store Ranging App</h1>
-  <button onclick="loadData()">🔄 Refresh</button>
-  <button id="viewToggleSwitch" onclick="toggleView()">📊 Switch to Store View</button>
 
-  <div id="storeControls" style="display:none;">
+  <div class="toolbar">
+    <button id="refreshBtn" class="btn">🔄 Refresh</button>
+    <button id="switchBtn" class="btn secondary">📊 Switch to Dashboard</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section id="dashboardView">
+    <h2 style="margin:12px 0 10px;display:flex;align-items:center;gap:8px">📈 Product Dashboard</h2>
+    <div id="dashList" class="cards"></div>
+  </section>
+
+  <!-- STORE VIEW -->
+  <section id="storeView" class="hidden">
     <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" onchange="renderProducts()">
-      <option value="">-- Choose a store --</option>
-    </select>
+    <select id="storeSelect" class="select"></select>
 
-    <div class="toggle-group" id="viewToggle">
-      <button class="toggle-btn active" id="btnNotRanging" onclick="setView('not ranging')">🔴 Not Ranging</button>
-      <button class="toggle-btn" id="btnRanging" onclick="setView('ranging')">🟢 Ranging</button>
+    <div class="row" style="margin:12px 0">
+      <div class="chip-toggle" role="tablist" aria-label="Status filter">
+        <button id="btnNotRanging" class="active" role="tab" aria-selected="true">🔴 Not Ranging</button>
+        <button id="btnRanging" role="tab" aria-selected="false">🟢 Ranging</button>
+      </div>
     </div>
 
-    <div id="summary" class="summary">
-      <strong>Total Deal Offer Summary:</strong> $<span id="total">0.00</span>
-      <ul id="offerList"></ul>
+    <div id="summaryPanel" class="panel hidden">
+      <strong>Total Deal Offer Summary</strong>
+      <div style="font-size:20px;font-weight:800;margin-top:6px" id="summaryTotal">$0.00</div>
     </div>
-  </div>
 
-  <div id="products"></div>
+    <h2 style="margin:14px 0 6px">Products</h2>
+    <div id="storeCards" class="cards"></div>
 
-  <div id="dashboard" style="display:none;margin-top:20px;">
-    <h2 style="color:#007aff;">📊 Product Dashboard</h2>
-    <div id="dashboardContent"></div>
-  </div>
+    <details style="margin-top:18px">
+      <summary>🛠 Debug Output</summary>
+      <pre id="debugOut">loading…</pre>
+    </details>
+  </section>
+</div>
 
-  <div id="storeModal">
-    <div id="storeModalContent">
-      <h3 id="modalTitle" style="color:#007aff;">Stores Not Ranging</h3>
-      <ul id="storeList"></ul>
-    </div>
-  </div>
+<script>
+const scriptUrl = "YOUR_APPS_SCRIPT_URL_HERE"; // <-- replace with your Apps Script URL
 
-  <div>
-    <h3 style="color:#007aff;">🛠 Debug Output</h3>
-    <div id="debug">Waiting for data...</div>
-  </div>
+// ---------- helpers ----------
+const norm = s => (s ?? "").toString().trim();
+const normStatus = s => norm(s).toLowerCase();
 
-  <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbwjs8iFcXbkXPcYbcvqAgKtU2grsMuxcoOOVY8Aox3nXppahHuktklIf7snHC86yN907Q/exec";
-    let allData = [];
-    let selectedDeals = {};
-    let currentView = "not ranging";
-    let currentMode = "dashboard";
+// status buckets (robust: handles case, spaces, synonyms)
+function getBucket(statusRaw){
+  const s = normStatus(statusRaw);
+  const has = (a)=>s.includes(a);
+  const notRanging = has('not') && has('ranging');        // "not ranging"
+  const notBuying  = has('not') && has('buying');         // "not buying"
+  const ranging    = (has('ranging') || has('buying')) && !notRanging; // "ranging","buying","not buying"
+  return { notRanging, notBuying, ranging };
+}
 
-    function normalizeStatus(raw) {
-      const s = String(raw ?? "").trim().toLowerCase();
-      if (["ranging","ranged","yes","buying"].includes(s)) return "ranging";
-      if (s.includes("not buying")) return "not buying";
-      if (s.includes("not")) return "not ranging";
-      return "unknown";
-    }
+function money(n){
+  const v = Number(n);
+  if(!isFinite(v)) return "$0.00";
+  return v.toLocaleString(undefined,{style:"currency",currency:"USD"});
+}
 
-    async function loadData() {
-      try {
-        setDebug("Loading data...");
-        const resp = await fetch(scriptUrl, { cache: "no-store" });
-        const json = await resp.json();
-        allData = json;
-        setDebug("Loaded " + allData.length + " rows");
-        populateStores();
-        resetSummary();
-        showDashboard();
-      } catch (err) {
-        setDebug("Error: " + err);
+// ---------- app state ----------
+let rawRows = [];
+let productsIndex = new Map(); // product -> meta from Deals (image, prices, etc.)
+let storeList = [];
+let viewMode = "dashboard"; // "dashboard" | "store"
+let storeFilter = "not";    // "not" | "ranging"
+let selectedStore = "";
+
+// ---------- DOM refs ----------
+const dashList = document.getElementById('dashList');
+const storeView = document.getElementById('storeView');
+const dashboardView = document.getElementById('dashboardView');
+const switchBtn = document.getElementById('switchBtn');
+const refreshBtn = document.getElementById('refreshBtn');
+const storeSelect = document.getElementById('storeSelect');
+const btnNotRanging = document.getElementById('btnNotRanging');
+const btnRanging = document.getElementById('btnRanging');
+const storeCards = document.getElementById('storeCards');
+const debugOut = document.getElementById('debugOut');
+const summaryPanel = document.getElementById('summaryPanel');
+const summaryTotal = document.getElementById('summaryTotal');
+
+// ---------- load ----------
+async function load(){
+  try{
+    const res = await fetch(`${scriptUrl}?t=${Date.now()}`, {cache:"no-store"});
+    const data = await res.json();
+
+    // Expect: { rows:[...], products:[{Product, "Image URL", "50% Deal", ...}] }
+    rawRows = Array.isArray(data.rows) ? data.rows : [];
+    productsIndex = new Map();
+    if(Array.isArray(data.products)){
+      for(const p of data.products){
+        const key = norm(p.Product);
+        if(key) productsIndex.set(key, p);
       }
     }
 
-    function setDebug(msg) { document.getElementById("debug").textContent = msg; }
+    // Build store list
+    const set = new Set();
+    rawRows.forEach(r=>{
+      const s = norm(r.Store);
+      if(s) set.add(s);
+    });
+    storeList = Array.from(set).sort((a,b)=>a.localeCompare(b));
 
-    function populateStores() {
-      const select = document.getElementById("storeSelect");
-      select.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(allData.map(d => d.Store))].filter(Boolean).sort();
-      stores.forEach(s => {
-        const opt = document.createElement("option");
-        opt.value = s; opt.textContent = s;
-        select.appendChild(opt);
+    // UI
+    renderDashboard();
+    renderStoreSelect();
+    renderStoreView(); // respects current filter
+
+    debugOut.textContent = JSON.stringify({
+      rows: rawRows.length,
+      example: rawRows[0],
+      productsMeta: productsIndex.size
+    }, null, 2);
+  }catch(err){
+    debugOut.textContent = "Error: " + err;
+  }
+}
+
+// ---------- dashboard ----------
+function renderDashboard(){
+  dashList.innerHTML = "";
+  // Aggregate per product across all stores
+  const tally = new Map(); // product -> {red, orange, green, img}
+  for(const r of rawRows){
+    const product = norm(r.Product);
+    if(!product) continue;
+    const t = tally.get(product) || {red:0, orange:0, green:0};
+    const b = getBucket(r.Status);
+    if(b.notRanging) t.red++;
+    else if(b.notBuying) t.orange++;
+    else if(b.ranging) t.green++;
+
+    // image
+    const meta = productsIndex.get(product);
+    if(meta && !t.img) t.img = norm(meta["Image URL"]);
+    tally.set(product, t);
+  }
+
+  const items = Array.from(tally.entries()).sort((a,b)=>b[1].red - a[1].red);
+  for(const [product, t] of items){
+    const total = t.red + t.orange + t.green || 1;
+    const redPct = (t.red/total)*100;
+    const orangePct = (t.orange/total)*100;
+    const greenPct = 100 - redPct - orangePct;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="thumb">${t.img ? `<img src="${t.img}" alt="">` : "🖼️"}</div>
+      <div>
+        <div class="title">${product}</div>
+        <div class="pill" style="margin-top:10px">
+          <span style="width:${redPct}%;background:var(--red)"></span>
+        </div>
+        <div class="dots">
+          <div class="dot red"><i></i>${t.red}</div>
+          <div class="dot orange"><i></i>${t.orange}</div>
+          <div class="dot green"><i></i>${t.green}</div>
+        </div>
+      </div>
+    `;
+    // Click -> popup of stores not ranging
+    card.style.cursor = "pointer";
+    card.addEventListener('click', ()=>{
+      const notRangingStores = rawRows
+        .filter(r=>norm(r.Product)===product && getBucket(r.Status).notRanging)
+        .map(r=>norm(r.Store))
+        .sort((a,b)=>a.localeCompare(b));
+
+      const list = notRangingStores.length
+        ? `<ul>${notRangingStores.map(s=>`<li>${s}</li>`).join("")}</ul>`
+        : `<em>All stores are buying/ranging.</em>`;
+
+      const modal = document.createElement('div');
+      Object.assign(modal.style,{
+        position:'fixed',inset:'0',background:'rgba(0,0,0,.35)',display:'grid',placeItems:'center',zIndex:9999
       });
-    }
-
-    function resetSummary() { selectedDeals = {}; updateSummary(); }
-
-    function setView(view) {
-      currentView = view;
-      document.getElementById("btnNotRanging").classList.toggle("active", view === "not ranging");
-      document.getElementById("btnRanging").classList.toggle("active", view === "ranging");
-      renderProducts();
-    }
-
-    function renderProducts() {
-      document.getElementById("dashboard").style.display = "none";
-      document.getElementById("storeControls").style.display = "block";
-      const container = document.getElementById("products");
-      container.innerHTML = "";
-      const storeName = document.getElementById("storeSelect").value;
-      if (!storeName) return;
-
-      const filtered = allData.filter(item => {
-        if (item.Store !== storeName) return false;
-        const st = normalizeStatus(item.Status);
-        if (currentView === "not ranging") return st === "not ranging";
-        if (currentView === "ranging") return st === "ranging" || st === "not buying";
+      const sheet = document.createElement('div');
+      Object.assign(sheet.style,{
+        background:'#fff',borderRadius:'16px',maxWidth:'560px',width:'92%',padding:'18px',boxShadow:'0 10px 40px rgba(0,0,0,.2)'
       });
+      sheet.innerHTML = `<h3 style="margin:0 0 10px">${product}</h3>
+                         <div style="color:var(--muted);margin-bottom:10px">Stores not ranging</div>
+                         <div style="max-height:60vh;overflow:auto">${list}</div>
+                         <div style="text-align:center;margin-top:12px;color:#8894aa"><small>Tap anywhere to close</small></div>`;
+      modal.appendChild(sheet);
+      modal.addEventListener('click', ()=>modal.remove());
+      document.body.appendChild(modal);
+    });
 
-      if (filtered.length === 0) { container.textContent = "No products found."; return; }
+    dashList.appendChild(card);
+  }
+}
 
-      filtered.forEach(p => {
-        const st = normalizeStatus(p.Status);
-        const card = document.createElement("div");
-        card.className = "card " + (st === "not ranging" ? "not-ranging" : st === "not buying" ? "not-buying" : st === "ranging" ? "ranging" : "");
+// ---------- store view ----------
+function renderStoreSelect(){
+  storeSelect.innerHTML = `<option value="">-- Choose a store --</option>` +
+    storeList.map(s=>`<option>${s}</option>`).join('');
+  // keep previous selection if still present
+  if(selectedStore && storeList.includes(selectedStore)){
+    storeSelect.value = selectedStore;
+  }
+}
 
-        const img = document.createElement("img");
-        img.src = p["Image URL"] || "";
-        img.alt = p.Product || "Product";
+function renderStoreView(){
+  // show/hide sections
+  dashboardView.classList.toggle('hidden', viewMode!=="dashboard");
+  storeView.classList.toggle('hidden', viewMode!=="store");
 
-        const nameEl = document.createElement("strong");
-        nameEl.textContent = p.Product || "-";
+  const store = selectedStore = norm(storeSelect.value);
+  const rowsForStore = rawRows.filter(r=>norm(r.Store)===store);
 
-        const btnDiv = document.createElement("div");
-        const btnAdd = document.createElement("button");
-        btnAdd.className = "add";
-        btnAdd.textContent = "Add to Offer";
-        btnAdd.onclick = e => { e.stopPropagation(); toggleOffer(btnAdd, p); };
-        const btnNot = document.createElement("button");
-        btnNot.className = "not";
-        btnNot.textContent = "Not Buying";
-        btnNot.onclick = e => { e.stopPropagation(); updateStatus(p, "Not Buying"); };
-        btnDiv.appendChild(btnAdd);
-        btnDiv.appendChild(btnNot);
+  // counters (debug & optional future use)
+  const counts = { notRanging:0, notBuying:0, ranging:0 };
+  for(const r of rowsForStore){
+    const b = getBucket(r.Status);
+    if(b.notRanging) counts.notRanging++;
+    else if(b.notBuying) counts.notBuying++;
+    else if(b.ranging) counts.ranging++;
+  }
 
-        card.appendChild(img);
-        card.appendChild(nameEl);
-        card.appendChild(btnDiv);
-        container.appendChild(card);
-      });
+  // Filter by current chip
+  let list = rowsForStore.filter(r=>{
+    const b = getBucket(r.Status);
+    return (storeFilter==="not") ? b.notRanging : (b.ranging || b.notBuying);
+  });
+
+  // Render cards
+  storeCards.innerHTML = "";
+  if(!store){ summaryPanel.classList.add('hidden'); return; }
+  summaryPanel.classList.remove('hidden'); // visible only when a store is chosen
+
+  if(list.length === 0){
+    storeCards.innerHTML = `<div class="meta">No products found.</div>`;
+  }else{
+    for(const r of list){
+      const product = norm(r.Product);
+      const meta = productsIndex.get(product) || {};
+      const img = norm(meta["Image URL"]);
+      const deal = meta["50% Deal"];
+      const price = meta["List Price"];
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="thumb">${img ? `<img src="${img}" alt="">` : "🖼️"}</div>
+        <div>
+          <div class="title">${product}</div>
+          <div class="meta">Metcash Code: ${meta["Metcash Code"]||"-"}</div>
+          <div class="meta">List Price: ${price ? money(price) : "-"}</div>
+          <div class="meta">50% Deal: ${deal ? money(deal) : "-"}</div>
+        </div>
+      `;
+      storeCards.appendChild(card);
     }
+  }
 
-    function toggleOffer(btn, productObj) {
-      const name = productObj["Product"];
-      const deal = parseFloat(productObj["50% Deal"]) || 0;
-      if (btn.classList.contains("added")) {
-        delete selectedDeals[name];
-        btn.classList.remove("added"); btn.textContent = "Add to Offer";
-      } else {
-        selectedDeals[name] = deal;
-        btn.classList.add("added"); btn.textContent = "Added";
-      }
-      updateSummary();
-    }
+  // Debug info
+  debugOut.textContent = JSON.stringify({store, filter:storeFilter, counts, sample:list[0]}, null, 2);
 
-    function updateSummary() {
-      const total = Object.values(selectedDeals).reduce((a,b)=>a+b,0);
-      document.getElementById("total").textContent = total.toFixed(2);
-      const list = document.getElementById("offerList"); list.innerHTML = "";
-      Object.entries(selectedDeals).forEach(([n,v]) => {
-        const li = document.createElement("li"); li.textContent = `${n} - $${v.toFixed(2)}`;
-        list.appendChild(li);
-      });
-    }
+  // Recalc total deal for items marked “Add to Offer” later (placeholder for your logic)
+  summaryTotal.textContent = "$0.00";
+}
 
-    function updateStatus(productObj, newStatus) {
-      fetch(scriptUrl, {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ Store: productObj.Store, Product: productObj.Product, Status: newStatus })
-      }).then(r=>r.text()).then(()=>loadData());
-    }
+// ---------- events ----------
+switchBtn.addEventListener('click', ()=>{
+  viewMode = (viewMode==="dashboard") ? "store" : "dashboard";
+  switchBtn.textContent = (viewMode==="dashboard") ? "📊 Switch to Store View" : "🏠 Switch to Dashboard";
+  renderStoreView();
+  renderDashboard();
+});
+refreshBtn.addEventListener('click', load);
+storeSelect.addEventListener('change', ()=>{ renderStoreView(); });
 
-    function showDashboard() {
-      currentMode = "dashboard";
-      document.getElementById("dashboard").style.display = "block";
-      document.getElementById("products").innerHTML = "";
-      renderDashboard();
-    }
+btnNotRanging.addEventListener('click', ()=>{
+  storeFilter = "not";
+  btnNotRanging.classList.add('active');
+  btnRanging.classList.remove('active');
+  renderStoreView();
+});
+btnRanging.addEventListener('click', ()=>{
+  storeFilter = "ranging";
+  btnRanging.classList.add('active');
+  btnNotRanging.classList.remove('active');
+  renderStoreView();
+});
 
-    function renderDashboard() {
-      const container = document.getElementById("dashboardContent"); container.innerHTML = "";
-      const grouped = {};
-      allData.forEach(item => {
-        const prod = item.Product; if (!prod) return;
-        const st = normalizeStatus(item.Status);
-        if (!grouped[prod]) grouped[prod] = { product:item, ranging:0, notRanging:0, notBuying:0 };
-        if (st === "ranging") grouped[prod].ranging++;
-        else if (st === "not ranging") grouped[prod].notRanging++;
-        else if (st === "not buying") grouped[prod].notBuying++;
-      });
-
-      Object.values(grouped).forEach(g => {
-        const card = document.createElement("div"); card.className = "card";
-        const img = document.createElement("img"); img.src = g.product["Image URL"] || "";
-        const nameEl = document.createElement("strong"); nameEl.textContent = g.product.Product || "-";
-
-        const pill = document.createElement("div");
-        pill.style.display="flex"; pill.style.borderRadius="20px"; pill.style.overflow="hidden"; pill.style.width="300px"; pill.style.height="20px";
-        const total = g.ranging+g.notRanging+g.notBuying||1;
-        const seg=(c,cls)=>{const d=document.createElement("div"); d.style.width=(c/total*100)+"%"; d.className=cls; d.title=c; return d;};
-        pill.appendChild(seg(g.notRanging,"pill-red"));
-        pill.appendChild(seg(g.notBuying,"pill-orange"));
-        pill.appendChild(seg(g.ranging,"pill-green"));
-
-        const counts=document.createElement("div");
-        counts.textContent=`🔴 ${g.notRanging}   🟠 ${g.notBuying}   🟢 ${g.ranging}`;
-
-        card.appendChild(img);
-        card.appendChild(nameEl);
-        card.appendChild(pill);
-        card.appendChild(counts);
-        card.addEventListener("click",()=>showStoreModal(g.product.Product));
-        container.appendChild(card);
-      });
-    }
-
-    function toggleView() {
-      if (currentMode === "dashboard") {
-        currentMode = "store";
-        document.getElementById("dashboard").style.display="none";
-        document.getElementById("storeControls").style.display="block";
-        document.getElementById("viewToggleSwitch").textContent="🏠 Switch to Dashboard";
-        renderProducts();
-      } else {
-        showDashboard();
-        document.getElementById("storeControls").style.display="none";
-        document.getElementById("viewToggleSwitch").textContent="📊 Switch to Store View";
-      }
-    }
-
-    function showStoreModal(productName) {
-      const modal=document.getElementById("storeModal");
-      const title=document.getElementById("modalTitle");
-      const list=document.getElementById("storeList");
-      title.textContent=`Stores Not Ranging: ${productName}`;
-      list.innerHTML="";
-      const stores=allData.filter(i=>i.Product===productName && normalizeStatus(i.Status)==="not ranging").map(i=>i.Store);
-      if (stores.length===0){const li=document.createElement("li");li.textContent="No stores found.";list.appendChild(li);} 
-      else {stores.forEach(s=>{const li=document.createElement("li");li.textContent=s;list.appendChild(li);});}
-      modal.style.display="flex";
-    }
-
-    document.getElementById("storeModal").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.style.display="none";});
-    loadData();
-  </script>
+// ---------- start ----------
+load();
+</script>
 </body>
 </html>
