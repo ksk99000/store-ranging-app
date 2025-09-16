@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Store Ranging App</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: system-ui, sans-serif; }
-  </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
   <div class="h-screen flex flex-col">
@@ -27,36 +24,32 @@
   </div>
 
   <script>
-    const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
+    const DATA_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Data";
     const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging";
+    const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
 
-    let deals = [];
-    let ranging = [];
     let stores = [];
-    let selectedDeals = [];
-
-    const categoryColors = {
-      "Cheese": "bg-yellow-200 text-yellow-800",
-      "Butter": "bg-orange-200 text-orange-800",
-      "UHT": "bg-blue-200 text-blue-800",
-      "Specialty": "bg-purple-200 text-purple-800",
-      "Default": "bg-slate-200 text-slate-800"
-    };
+    let ranging = [];
+    let deals = [];
 
     document.getElementById("btn-refresh").addEventListener("click", loadData);
     document.getElementById("store-select").addEventListener("change", e => showStoreProducts(e.target.value));
 
     async function loadData() {
       try {
-        const dealsRes = await fetch(DEALS_URL);
+        const [dataRes, rangingRes, dealsRes] = await Promise.all([
+          fetch(DATA_URL),
+          fetch(RANGING_URL),
+          fetch(DEALS_URL)
+        ]);
+
+        const dataTab = await dataRes.json();
+        ranging = await rangingRes.json();
         deals = await dealsRes.json();
 
-        const res = await fetch(RANGING_URL);
-        ranging = await res.json();
-
-        // Store names are column headers (keys), not rows
-        const keys = Object.keys(ranging[0] || {});
-        stores = keys.filter(k => k !== "Product" && k !== "Ranging");
+        // Stores are in first row of Data tab (keys of object)
+        const firstRow = dataTab[0] || {};
+        stores = Object.values(firstRow).filter(v => v && v !== "Store ID");
 
         renderStoreDropdown();
       } catch (e) {
@@ -73,11 +66,6 @@
         opt.textContent = store;
         select.appendChild(opt);
       });
-    }
-
-    function categoryBadge(cat) {
-      const cls = categoryColors[cat] || categoryColors["Default"];
-      return `<span class="px-2 py-0.5 text-xs rounded ${cls}">${cat}</span>`;
     }
 
     function showStoreProducts(store) {
@@ -99,7 +87,7 @@
                    onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
             </div>
             <div class="font-semibold mb-1">${row["Product"]}</div>
-            ${categoryBadge(productMeta["Category"])}
+            <span class="text-xs text-slate-600">${productMeta["Category"] || ""}</span>
           `;
           grid.appendChild(card);
         }
