@@ -2,95 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     h1 { font-size: 1.5em; }
-    select, button { margin: 10px 0; padding: 8px; }
     .product-card {
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       margin: 10px 0;
       display: flex;
-      align-items: flex-start;
-      background: #fafafa;
+      align-items: center;
     }
     .product-card img {
       width: 80px;
       height: 80px;
       object-fit: contain;
       margin-right: 15px;
-      background: #eee;
     }
-    .product-info { flex: 1; font-size: 14px; }
-    .buttons { display: flex; flex-direction: column; gap: 6px; }
-    button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .add-btn { background: #007bff; color: #fff; }
-    .not-btn { background: #dc3545; color: #fff; }
+    .product-info { flex-grow: 1; }
+    .product-info p { margin: 4px 0; }
   </style>
 </head>
 <body>
   <h1>Store Ranging App</h1>
-
   <button onclick="loadData()">Refresh</button>
-  <br>
+  <br><br>
   <label for="storeSelect">Select a store:</label>
-  <select id="storeSelect" onchange="renderProducts()">
+  <select id="storeSelect" onchange="displayProducts()">
     <option value="">-- Choose a store --</option>
   </select>
-
   <div id="products"></div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycby7QUigwdH7PFQVpBe2YH08ZfM09V7Cx3yRnbfwMiZ8DzRk5bkvlwPr9Auv--_nTjKJKg/exec";
+    const apiUrl = "https://script.google.com/macros/s/AKfycbzAtNj6NR8Wv1tclQbOkLezsosOeGRLIVpkwtg4h8OkMAHCMfNKfpo9zf3ZdtT3ysJ0RA/exec";
     let allData = [];
 
     async function loadData() {
       document.getElementById("products").innerHTML = "Loading...";
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error("Network error " + res.status);
         allData = await res.json();
 
         // unique store list
-        const stores = [...new Set(allData.map(r => r.Store))].sort();
-        const select = document.getElementById("storeSelect");
-        select.innerHTML = '<option value="">-- Choose a store --</option>';
+        const stores = [...new Set(allData.map(item => item.Store))].filter(s => s);
+        const storeSelect = document.getElementById("storeSelect");
+        storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
         stores.forEach(store => {
           const opt = document.createElement("option");
           opt.value = store;
           opt.textContent = store;
-          select.appendChild(opt);
+          storeSelect.appendChild(opt);
         });
 
-        document.getElementById("products").innerHTML = "";
+        document.getElementById("products").innerHTML = "Select a store to see products.";
       } catch (err) {
+        document.getElementById("products").innerHTML = "Error loading data: " + err;
         console.error(err);
-        document.getElementById("products").innerHTML = "Error loading data.";
       }
     }
 
-    function renderProducts() {
+    function displayProducts() {
       const store = document.getElementById("storeSelect").value;
       const container = document.getElementById("products");
       container.innerHTML = "";
 
       if (!store) return;
 
-      const products = allData.filter(r =>
-        r.Store === store &&
-        r.Status &&
-        r.Status.trim().toLowerCase() === "not ranging"
-      );
+      const products = allData.filter(item => item.Store === store && item.Status === "Not Ranging");
 
       if (products.length === 0) {
-        container.innerHTML = "<p>No 'Not Ranging' products for this store.</p>";
+        container.innerHTML = "<p>No products found.</p>";
         return;
       }
 
@@ -98,48 +82,30 @@
         const card = document.createElement("div");
         card.className = "product-card";
 
-        card.innerHTML = `
-          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product Image">
-          <div class="product-info">
-            <strong>${p.Product}</strong><br>
-            <b>Metcash Code:</b> ${p['Metcash Code'] || '-'}<br>
-            <b>SDA Ranking:</b> ${p['SDA Ranking'] || '-'}<br>
-            <b>Category:</b> ${p['Category'] || '-'}<br>
-            <b>Layout:</b> ${p['Metcash Layout'] || '-'}<br>
-            <b>Base Range:</b> ${p['Metcash Base Range'] || '-'}<br>
-            <b>List Price:</b> ${p['List Price'] || '-'}<br>
-            <b>50% Deal:</b> ${p['50% Deal'] || '-'}
-          </div>
-          <div class="buttons">
-            <button class="add-btn" onclick="addToOffer('${p.Store}','${p.Product}')">Add to Offer</button>
-            <button class="not-btn" onclick="markNotBuying('${p.Store}','${p.Product}')">Not Buying</button>
-          </div>
+        const img = document.createElement("img");
+        img.src = p["Image URL"] || "https://via.placeholder.com/80";
+        img.alt = p.Product || "No Image";
+
+        const info = document.createElement("div");
+        info.className = "product-info";
+        info.innerHTML = `
+          <p><strong>${p.Product || "Unnamed Product"}</strong></p>
+          <p>Metcash Code: ${p["Metcash Code"] || "-"}</p>
+          <p>SDA Ranking: ${p["SDA Ranking"] || "-"}</p>
+          <p>Category: ${p["Category"] || "-"}</p>
+          <p>Metcash Layout: ${p["Metcash Layout"] || "-"}</p>
+          <p>Metcash Base Range: ${p["Metcash Base Range"] || "-"}</p>
+          <p>List Price: ${p["List Price"] || "-"}</p>
+          <p>50% Deal: ${p["50% Deal"] || "-"}</p>
         `;
 
+        card.appendChild(img);
+        card.appendChild(info);
         container.appendChild(card);
       });
     }
 
-    function addToOffer(store, product) {
-      alert(`${product} added to offer for ${store}`);
-    }
-
-    async function markNotBuying(store, product) {
-      try {
-        const res = await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ store, product }),
-          headers: { "Content-Type": "application/json" }
-        });
-        const result = await res.json();
-        alert(result.message || "Updated");
-        loadData(); // reload after update
-      } catch (err) {
-        console.error("Error:", err);
-        alert("Failed to update.");
-      }
-    }
-
+    // Load data on start
     loadData();
   </script>
 </body>
