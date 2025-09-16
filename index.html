@@ -12,9 +12,8 @@
       padding: 10px;
       margin: 10px 0;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       background: #fafafa;
-      justify-content: space-between;
     }
     .product-card img {
       width: 80px;
@@ -22,54 +21,12 @@
       object-fit: contain;
       margin-right: 12px;
     }
-    .product-info {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .product-name {
-      font-weight: bold;
-      color: #007bff;
-      cursor: pointer;
-    }
-    .buttons { margin-left: 15px; }
+    .product-info { flex: 1; }
+    .buttons { margin-top: 10px; }
     button { padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
     .add { background: #007bff; color: white; }
-    .add.added { background: #28a745; } /* green when added */
     .not { background: #dc3545; color: white; }
-    .offer-summary {
-      background: #e6f7ff;
-      border: 1px solid #91d5ff;
-      padding: 12px;
-      margin: 20px 0;
-      border-radius: 6px;
-    }
-    /* Popup modal */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: rgba(255,255,255,0.5); /* translucent white */
-      backdrop-filter: blur(12px);       /* frosted glass blur */
-      -webkit-backdrop-filter: blur(12px); /* safari support */
-      padding: 20px;
-      border-radius: 16px;              /* rounder corners */
-      max-width: 420px;
-      width: 90%;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-    }
-    .modal-content h3 {
-      margin-top: 0;
-      font-size: 1.2em;
-    }
+    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; max-height: 250px; overflow-y: auto; }
   </style>
 </head>
 <body>
@@ -82,33 +39,26 @@
     <option value="">-- Choose a store --</option>
   </select>
 
-  <!-- Offer summary panel -->
-  <div id="offerSummary" class="offer-summary" style="display:none;">
-    <h2>Offer Summary</h2>
-    <p id="totalValue">Total: $0.00</p>
-    <ul id="offerList"></ul>
-  </div>
-
   <h2>Products</h2>
   <div id="products"></div>
 
-  <!-- Popup modal -->
-  <div id="modal" class="modal" onclick="closeModal(event)">
-    <div id="modalContent" class="modal-content"></div>
-  </div>
+  <h2>Debug Output</h2>
+  <pre id="debugOutput">Raw JSON will appear here</pre>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbxNuHEsrGYVpRrVDqUqfr43oZ1vRltptx7a__4ahKov7T2SJW6WMoAfCHRY8MnX0vjz7w/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxwpjfu80sA2RRw1TdV0FW27RBQsfpucO1d0hgx1nvMxOk7ep5V7tuvnvyBScFjjoZUDw/exec";
     let allData = [];
-    let selectedDeals = [];
 
     async function loadData() {
       const productsDiv = document.getElementById("products");
       productsDiv.innerHTML = "Loading...";
       try {
         const res = await fetch(scriptUrl);
-        allData = await res.json();
+        const text = await res.text();
+        document.getElementById("debugOutput").textContent = text; // raw debug
+        allData = JSON.parse(text);
 
+        // Build dropdown
         const stores = [...new Set(allData.map(r => r.Store))].filter(s => s);
         const storeSelect = document.getElementById("storeSelect");
         storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
@@ -122,6 +72,7 @@
         productsDiv.innerHTML = "Select a store to view Not Ranging products.";
       } catch (err) {
         productsDiv.innerHTML = "Error loading data: " + err;
+        console.error("Fetch error:", err);
       }
     }
 
@@ -144,90 +95,41 @@
       }
 
       products.forEach(p => {
-        const dealValue = parseFloat(p['50% Deal']) || 0;
-        const isSelected = selectedDeals.some(d => d.product === p.Product);
-
         const card = document.createElement("div");
         card.className = "product-card";
         card.innerHTML = `
+          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
           <div class="product-info">
-            <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
-            <span class="product-name" onclick="showDetails(${JSON.stringify(p).replace(/"/g, '&quot;')})">${p.Product || '-'}</span>
-          </div>
-          <div class="buttons">
-            <button class="add ${isSelected ? 'added' : ''}" onclick="toggleOffer(this,'${p.Product}','${dealValue}')">
-              ${isSelected ? 'Added' : 'Add to Offer'}
-            </button>
-            <button class="not" onclick="removeFromOffer('${p.Product}')">Not Buying</button>
+            <p><strong>${p.Product || '-'}</strong></p>
+            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
+            <p>Category: ${p['Category'] || '-'}</p>
+            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
+            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
+            <p>List Price: ${p['List Price'] || '-'}</p>
+            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+            <p>Status: ${p['Status'] || '-'}</p>
+            <div class="buttons">
+              <button class="add" onclick="updateStatus('${p.Store}','${p.Product}','Offer')">Add to Offer</button>
+              <button class="not" onclick="updateStatus('${p.Store}','${p.Product}','Not Buying')">Not Buying</button>
+            </div>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    function toggleOffer(btn, product, dealValue) {
-      const existing = selectedDeals.find(d => d.product === product);
-      if (existing) {
-        selectedDeals = selectedDeals.filter(d => d.product !== product);
-        btn.classList.remove("added");
-        btn.textContent = "Add to Offer";
-      } else {
-        selectedDeals.push({ product, dealValue: parseFloat(dealValue) || 0 });
-        btn.classList.add("added");
-        btn.textContent = "Added";
-      }
-      updateOfferSummary();
-    }
-
-    function removeFromOffer(product) {
-      selectedDeals = selectedDeals.filter(d => d.product !== product);
-      updateOfferSummary();
-      renderProducts();
-    }
-
-    function updateOfferSummary() {
-      const summaryDiv = document.getElementById("offerSummary");
-      const totalValueEl = document.getElementById("totalValue");
-      const listEl = document.getElementById("offerList");
-
-      if (selectedDeals.length === 0) {
-        summaryDiv.style.display = "none";
-        return;
-      }
-
-      summaryDiv.style.display = "block";
-      const total = selectedDeals.reduce((sum, d) => sum + d.dealValue, 0);
-      totalValueEl.textContent = "Total: $" + total.toFixed(2);
-
-      listEl.innerHTML = "";
-      selectedDeals.forEach(d => {
-        const li = document.createElement("li");
-        li.textContent = `${d.product} — $${d.dealValue.toFixed(2)}`;
-        listEl.appendChild(li);
-      });
-    }
-
-    function showDetails(product) {
-      const modal = document.getElementById("modal");
-      const modalContent = document.getElementById("modalContent");
-      modal.style.display = "flex";
-      modalContent.innerHTML = `
-        <h3>${product.Product || '-'}</h3>
-        <p>Metcash Code: ${product['Metcash Code'] || '-'}</p>
-        <p>SDA Ranking: ${product['SDA Ranking'] || '-'}</p>
-        <p>Category: ${product['Category'] || '-'}</p>
-        <p>Layout: ${product['Metcash Layout'] || '-'}</p>
-        <p>Base Range: ${product['Metcash Base Range'] || '-'}</p>
-        <p>List Price: ${product['List Price'] || '-'}</p>
-        <p>50% Deal: ${product['50% Deal'] || '-'}</p>
-        <p>Status: ${product['Status'] || '-'}</p>
-      `;
-    }
-
-    function closeModal(event) {
-      const modal = document.getElementById("modal");
-      if (event.target.id === "modal") {
-        modal.style.display = "none";
+    async function updateStatus(store, product, status) {
+      try {
+        await fetch(scriptUrl, {
+          method: "POST",
+          body: JSON.stringify({ Store: store, Product: product, Status: status }),
+          headers: { "Content-Type": "application/json" }
+        });
+        alert(`Updated: ${product} → ${status}`);
+        loadData(); // reload after update
+      } catch (err) {
+        alert("Update failed: " + err);
       }
     }
 
