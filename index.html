@@ -44,7 +44,6 @@
   <button onclick="loadData()">🔄 Refresh</button>
   <button id="viewToggleSwitch" onclick="toggleView()">📊 Switch to Store View</button>
 
-  <!-- Store controls -->
   <div id="storeControls" style="display:none;">
     <label for="storeSelect">Select a store:</label>
     <select id="storeSelect" onchange="renderProducts()">
@@ -62,16 +61,13 @@
     </div>
   </div>
 
-  <!-- Store list -->
   <div id="products"></div>
 
-  <!-- Dashboard -->
   <div id="dashboard" style="display:none;margin-top:20px;">
     <h2 style="color:#007aff;">📊 Product Dashboard</h2>
     <div id="dashboardContent"></div>
   </div>
 
-  <!-- Modal -->
   <div id="storeModal">
     <div id="storeModalContent">
       <h3 id="modalTitle" style="color:#007aff;">Stores Not Ranging</h3>
@@ -85,83 +81,49 @@
   </div>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbwjs8iFcXbkXPcYbcvqAgKtU2grsMuxcoOOVY8Aox3nXppahHuktklIf7snHC86yN907Q/exec";
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
     let currentMode = "dashboard";
 
-    /* ----- Helpers ----- */
     function normalizeStatus(raw) {
-      const s = String(raw ?? "").trim().toLowerCase()
-        .replace(/\s+/g, " ")
-        .replace(/[-_]/g, " "); // treat hyphen/underscore as space
-
-      // canonical buckets
-      const rangingAliases = new Set(["ranging","range","ranged","yes","y","buying","stocked","in range"]);
-      const notRangingAliases = new Set(["not ranging","not range","not ranged","no","n","nr","out of range","oor","missing"]);
-      const notBuyingAliases = new Set(["not buying","no buys","nb","declined","on hold"]);
-
-      if (rangingAliases.has(s)) return "ranging";
-      if (notRangingAliases.has(s)) return "not ranging";
-      if (notBuyingAliases.has(s)) return "not buying";
-
-      // common phrase forms
-      if (s.includes("not") && s.includes("buy")) return "not buying";
-      if (s.includes("not") && s.includes("rang")) return "not ranging";
-      if (s.includes("rang") || s === "yes") return "ranging";
-
+      const s = String(raw ?? "").trim().toLowerCase();
+      if (["ranging","ranged","yes","buying"].includes(s)) return "ranging";
+      if (s.includes("not buying")) return "not buying";
+      if (s.includes("not")) return "not ranging";
       return "unknown";
     }
 
-    function getKey(obj, key) {
-      return obj[key] ?? obj[key.toLowerCase()] ?? obj[key.toUpperCase()];
-    }
-
-    /* ----- Data load ----- */
     async function loadData() {
       try {
         setDebug("Loading data...");
         const resp = await fetch(scriptUrl, { cache: "no-store" });
         const json = await resp.json();
         allData = json;
-
-        // Show status mix to help diagnose
-        const counts = {};
-        for (const row of allData) {
-          const norm = normalizeStatus(getKey(row,"Status"));
-          counts[norm] = (counts[norm] || 0) + 1;
-        }
-        setDebug("Loaded rows: " + allData.length + "\nStatus counts: " + JSON.stringify(counts, null, 2));
-
+        setDebug("Loaded " + allData.length + " rows");
         populateStores();
         resetSummary();
         showDashboard();
       } catch (err) {
-        setDebug("Error fetching data: " + err);
+        setDebug("Error: " + err);
       }
     }
 
-    function setDebug(msg) {
-      document.getElementById("debug").textContent = msg;
-    }
+    function setDebug(msg) { document.getElementById("debug").textContent = msg; }
 
     function populateStores() {
       const select = document.getElementById("storeSelect");
       select.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(allData.map(d => getKey(d,"Store")))].filter(Boolean).sort();
-      for (const storeName of stores) {
+      const stores = [...new Set(allData.map(d => d.Store))].filter(Boolean).sort();
+      stores.forEach(s => {
         const opt = document.createElement("option");
-        opt.value = storeName;
-        opt.textContent = storeName;
+        opt.value = s; opt.textContent = s;
         select.appendChild(opt);
-      }
+      });
     }
 
-    function resetSummary() {
-      selectedDeals = {};
-      updateSummary();
-    }
+    function resetSummary() { selectedDeals = {}; updateSummary(); }
 
     function setView(view) {
       currentView = view;
@@ -170,75 +132,63 @@
       renderProducts();
     }
 
-    /* ----- Store view ----- */
     function renderProducts() {
       document.getElementById("dashboard").style.display = "none";
       document.getElementById("storeControls").style.display = "block";
       const container = document.getElementById("products");
       container.innerHTML = "";
-
       const storeName = document.getElementById("storeSelect").value;
       if (!storeName) return;
 
       const filtered = allData.filter(item => {
-        if (getKey(item,"Store") !== storeName) return false;
-        const st = normalizeStatus(getKey(item,"Status"));
+        if (item.Store !== storeName) return false;
+        const st = normalizeStatus(item.Status);
         if (currentView === "not ranging") return st === "not ranging";
-        if (currentView === "ranging")     return st === "ranging" || st === "not buying";
-        return false;
+        if (currentView === "ranging") return st === "ranging" || st === "not buying";
       });
 
-      if (filtered.length === 0) {
-        container.textContent = "No products found.";
-        return;
-      }
+      if (filtered.length === 0) { container.textContent = "No products found."; return; }
 
-      for (const p of filtered) {
-        const st = normalizeStatus(getKey(p,"Status"));
+      filtered.forEach(p => {
+        const st = normalizeStatus(p.Status);
         const card = document.createElement("div");
         card.className = "card " + (st === "not ranging" ? "not-ranging" : st === "not buying" ? "not-buying" : st === "ranging" ? "ranging" : "");
 
         const img = document.createElement("img");
-        img.src = getKey(p,"Image URL") || "";
-        img.alt = getKey(p,"Product") || "Product";
+        img.src = p["Image URL"] || "";
+        img.alt = p.Product || "Product";
 
         const nameEl = document.createElement("strong");
-        nameEl.textContent = getKey(p,"Product") || "-";
+        nameEl.textContent = p.Product || "-";
 
         const btnDiv = document.createElement("div");
-
         const btnAdd = document.createElement("button");
         btnAdd.className = "add";
         btnAdd.textContent = "Add to Offer";
         btnAdd.onclick = e => { e.stopPropagation(); toggleOffer(btnAdd, p); };
-
         const btnNot = document.createElement("button");
         btnNot.className = "not";
         btnNot.textContent = "Not Buying";
         btnNot.onclick = e => { e.stopPropagation(); updateStatus(p, "Not Buying"); };
-
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
 
         card.appendChild(img);
         card.appendChild(nameEl);
         card.appendChild(btnDiv);
-
         container.appendChild(card);
-      }
+      });
     }
 
     function toggleOffer(btn, productObj) {
-      const name = getKey(productObj,"Product");
-      const deal = parseFloat(getKey(productObj,"50% Deal")) || 0;
+      const name = productObj["Product"];
+      const deal = parseFloat(productObj["50% Deal"]) || 0;
       if (btn.classList.contains("added")) {
         delete selectedDeals[name];
-        btn.classList.remove("added");
-        btn.textContent = "Add to Offer";
+        btn.classList.remove("added"); btn.textContent = "Add to Offer";
       } else {
         selectedDeals[name] = deal;
-        btn.classList.add("added");
-        btn.textContent = "Added";
+        btn.classList.add("added"); btn.textContent = "Added";
       }
       updateSummary();
     }
@@ -246,31 +196,21 @@
     function updateSummary() {
       const total = Object.values(selectedDeals).reduce((a,b)=>a+b,0);
       document.getElementById("total").textContent = total.toFixed(2);
-      const list = document.getElementById("offerList");
-      list.innerHTML = "";
-      for (const [name,val] of Object.entries(selectedDeals)) {
-        const li = document.createElement("li");
-        li.textContent = `${name} - $${val.toFixed(2)}`;
+      const list = document.getElementById("offerList"); list.innerHTML = "";
+      Object.entries(selectedDeals).forEach(([n,v]) => {
+        const li = document.createElement("li"); li.textContent = `${n} - $${v.toFixed(2)}`;
         list.appendChild(li);
-      }
+      });
     }
 
     function updateStatus(productObj, newStatus) {
       fetch(scriptUrl, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
-          Store: getKey(productObj,"Store"),
-          Product: getKey(productObj,"Product"),
-          Status: newStatus
-        })
-      })
-      .then(r=>r.text())
-      .then(()=>loadData())
-      .catch(err=>setDebug("Error updating sheet: " + err));
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ Store: productObj.Store, Product: productObj.Product, Status: newStatus })
+      }).then(r=>r.text()).then(()=>loadData());
     }
 
-    /* ----- Dashboard ----- */
     function showDashboard() {
       currentMode = "dashboard";
       document.getElementById("dashboard").style.display = "block";
@@ -279,119 +219,69 @@
     }
 
     function renderDashboard() {
-      const container = document.getElementById("dashboardContent");
-      container.innerHTML = "";
-
+      const container = document.getElementById("dashboardContent"); container.innerHTML = "";
       const grouped = {};
-      for (const item of allData) {
-        const product = getKey(item,"Product");
-        if (!product) continue;
-        const status = normalizeStatus(getKey(item,"Status"));
-        if (!grouped[product]) grouped[product] = { product: item, ranging: 0, notRanging: 0, notBuying: 0 };
-        if      (status === "ranging")     grouped[product].ranging++;
-        else if (status === "not ranging") grouped[product].notRanging++;
-        else if (status === "not buying")  grouped[product].notBuying++;
-      }
+      allData.forEach(item => {
+        const prod = item.Product; if (!prod) return;
+        const st = normalizeStatus(item.Status);
+        if (!grouped[prod]) grouped[prod] = { product:item, ranging:0, notRanging:0, notBuying:0 };
+        if (st === "ranging") grouped[prod].ranging++;
+        else if (st === "not ranging") grouped[prod].notRanging++;
+        else if (st === "not buying") grouped[prod].notBuying++;
+      });
 
-      for (const g of Object.values(grouped)) {
-        const card = document.createElement("div");
-        card.className = "card"; // neutral on dashboard
-
-        const img = document.createElement("img");
-        img.src = getKey(g.product,"Image URL") || "";
-        img.alt = getKey(g.product,"Product") || "Product";
-
-        const right = document.createElement("div");
-        right.style.display = "flex";
-        right.style.flexDirection = "column";
-        right.style.gap = "6px";
-        right.style.flex = "1";
-
-        const nameEl = document.createElement("strong");
-        nameEl.textContent = getKey(g.product,"Product") || "-";
+      Object.values(grouped).forEach(g => {
+        const card = document.createElement("div"); card.className = "card";
+        const img = document.createElement("img"); img.src = g.product["Image URL"] || "";
+        const nameEl = document.createElement("strong"); nameEl.textContent = g.product.Product || "-";
 
         const pill = document.createElement("div");
-        pill.style.display = "flex";
-        pill.style.borderRadius = "20px";
-        pill.style.overflow = "hidden";
-        pill.style.width = "300px";
-        pill.style.height = "20px";
+        pill.style.display="flex"; pill.style.borderRadius="20px"; pill.style.overflow="hidden"; pill.style.width="300px"; pill.style.height="20px";
+        const total = g.ranging+g.notRanging+g.notBuying||1;
+        const seg=(c,cls)=>{const d=document.createElement("div"); d.style.width=(c/total*100)+"%"; d.className=cls; d.title=c; return d;};
+        pill.appendChild(seg(g.notRanging,"pill-red"));
+        pill.appendChild(seg(g.notBuying,"pill-orange"));
+        pill.appendChild(seg(g.ranging,"pill-green"));
 
-        const total = (g.ranging + g.notRanging + g.notBuying) || 1;
-        const seg = (count, cls) => {
-          const div = document.createElement("div");
-          div.style.width = (count/total*100) + "%";
-          div.className = cls;
-          div.title = count;
-          return div;
-        };
-        pill.appendChild(seg(g.notRanging, "pill-red"));
-        pill.appendChild(seg(g.notBuying, "pill-orange"));
-        pill.appendChild(seg(g.ranging, "pill-green"));
-
-        const counts = document.createElement("div");
-        counts.textContent = `🔴 ${g.notRanging}   🟠 ${g.notBuying}   🟢 ${g.ranging}`;
+        const counts=document.createElement("div");
+        counts.textContent=`🔴 ${g.notRanging}   🟠 ${g.notBuying}   🟢 ${g.ranging}`;
 
         card.appendChild(img);
-        right.appendChild(nameEl);
-        right.appendChild(pill);
-        right.appendChild(counts);
-        card.appendChild(right);
-
-        // Click → modal with stores NOT RANGING that product
-        card.addEventListener("click", () => showStoreModal(getKey(g.product,"Product")));
-
+        card.appendChild(nameEl);
+        card.appendChild(pill);
+        card.appendChild(counts);
+        card.addEventListener("click",()=>showStoreModal(g.product.Product));
         container.appendChild(card);
-      }
+      });
     }
 
     function toggleView() {
       if (currentMode === "dashboard") {
         currentMode = "store";
-        document.getElementById("dashboard").style.display = "none";
-        document.getElementById("storeControls").style.display = "block";
-        document.getElementById("viewToggleSwitch").textContent = "🏠 Switch to Dashboard";
+        document.getElementById("dashboard").style.display="none";
+        document.getElementById("storeControls").style.display="block";
+        document.getElementById("viewToggleSwitch").textContent="🏠 Switch to Dashboard";
         renderProducts();
       } else {
         showDashboard();
-        document.getElementById("storeControls").style.display = "none";
-        document.getElementById("viewToggleSwitch").textContent = "📊 Switch to Store View";
+        document.getElementById("storeControls").style.display="none";
+        document.getElementById("viewToggleSwitch").textContent="📊 Switch to Store View";
       }
     }
 
-    /* ----- Modal (stores not ranging) ----- */
     function showStoreModal(productName) {
-      const modal = document.getElementById("storeModal");
-      const title = document.getElementById("modalTitle");
-      const list = document.getElementById("storeList");
-      title.textContent = `Stores Not Ranging: ${productName}`;
-      list.innerHTML = "";
-
-      const stores = allData
-        .filter(item => getKey(item,"Product") === productName && normalizeStatus(getKey(item,"Status")) === "not ranging")
-        .map(item => getKey(item,"Store"));
-
-      if (stores.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No stores found.";
-        list.appendChild(li);
-      } else {
-        for (const s of stores) {
-          const li = document.createElement("li");
-          li.textContent = s;
-          list.appendChild(li);
-        }
-      }
-
-      modal.style.display = "flex";
-      modal.style.alignItems = "flex-end";
-      modal.style.justifyContent = "center";
+      const modal=document.getElementById("storeModal");
+      const title=document.getElementById("modalTitle");
+      const list=document.getElementById("storeList");
+      title.textContent=`Stores Not Ranging: ${productName}`;
+      list.innerHTML="";
+      const stores=allData.filter(i=>i.Product===productName && normalizeStatus(i.Status)==="not ranging").map(i=>i.Store);
+      if (stores.length===0){const li=document.createElement("li");li.textContent="No stores found.";list.appendChild(li);} 
+      else {stores.forEach(s=>{const li=document.createElement("li");li.textContent=s;list.appendChild(li);});}
+      modal.style.display="flex";
     }
 
-    document.getElementById("storeModal").addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
-    });
-
+    document.getElementById("storeModal").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.style.display="none";});
     loadData();
   </script>
 </body>
