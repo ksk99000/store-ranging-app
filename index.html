@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App</title>
+  <title>Store Ranging App (with Debug)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { font-size: 1.5em; }
-    .store-select { margin: 10px 0; }
+    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: auto; }
     .product-card {
       border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px;
       margin: 10px 0;
       display: flex;
       align-items: flex-start;
@@ -22,11 +21,9 @@
       height: 80px;
       object-fit: contain;
       margin-right: 15px;
-      background: #eee;
     }
     .product-info { flex-grow: 1; }
-    .product-info p { margin: 4px 0; }
-    .buttons { margin-left: 15px; display: flex; flex-direction: column; gap: 6px; }
+    .buttons { display: flex; flex-direction: column; gap: 6px; }
     button {
       padding: 6px 12px;
       border: none;
@@ -35,19 +32,22 @@
     }
     .add-btn { background: #007bff; color: #fff; }
     .not-btn { background: #dc3545; color: #fff; }
-    .placeholder-img { background: #ddd; display: inline-block; width:80px; height:80px; }
   </style>
 </head>
 <body>
-  <h1>Store Ranging App</h1>
+  <h1>Store Ranging App (Debug)</h1>
+
   <button onclick="loadData()">Refresh</button>
   <br><br>
-
   <label for="storeSelect">Select a store:</label>
   <select id="storeSelect" onchange="renderProducts()">
     <option value="">-- Choose a store --</option>
   </select>
 
+  <h2>Raw JSON Debug Output</h2>
+  <pre id="debug"></pre>
+
+  <h2>Products</h2>
   <div id="products"></div>
 
   <script>
@@ -56,12 +56,14 @@
 
     async function loadData() {
       document.getElementById("products").innerHTML = "Loading...";
+      document.getElementById("debug").textContent = "Loading...";
+
       try {
         const res = await fetch(API_URL);
-        if (!res.ok) throw new Error("Network response was not ok: " + res.status);
-        allData = await res.json();
+        const text = await res.text(); // raw text
+        document.getElementById("debug").textContent = text; // show raw JSON
+        allData = JSON.parse(text); // parse JSON
 
-        // Build store dropdown
         const stores = [...new Set(allData.map(item => item.Store))].filter(s => s);
         const select = document.getElementById("storeSelect");
         select.innerHTML = '<option value="">-- Choose a store --</option>';
@@ -74,8 +76,8 @@
 
         document.getElementById("products").innerHTML = "Select a store to see Not Ranging products.";
       } catch (err) {
-        console.error("Error loading data:", err);
-        document.getElementById("products").innerHTML = "Error loading data.";
+        document.getElementById("products").innerHTML = "Error loading data: " + err;
+        console.error("Fetch error:", err);
       }
     }
 
@@ -84,14 +86,12 @@
       const container = document.getElementById("products");
       container.innerHTML = "";
 
-      if (!store) {
-        return;
-      }
+      if (!store) return;
 
-      const products = allData.filter(item =>
-        item.Store === store &&
-        item.Status &&
-        item.Status.trim().toLowerCase() === "not ranging"
+      const products = allData.filter(p =>
+        p.Store === store &&
+        p.Status &&
+        p.Status.trim().toLowerCase() === "not ranging"
       );
 
       if (products.length === 0) {
@@ -103,35 +103,38 @@
         const card = document.createElement("div");
         card.className = "product-card";
 
-        const img = document.createElement("img");
-        img.src = p["Image URL"] || "";
-        img.alt = p.Product || "No Image";
-        if (!p["Image URL"]) {
-          // If no image URL, show a placeholder
-          img.style.background = "#ccc";
-        }
-
-        const info = document.createElement("div");
-        info.className = "product-info";
-        info.innerHTML = `
-          <p><strong>${p.Product || "Unnamed Product"}</strong></p>
-          <p>Metcash Code: ${p["Metcash Code"] || "-"}</p>
-          <p>SDA Ranking: ${p["SDA Ranking"] || "-"}</p>
-          <p>Category: ${p["Category"] || "-"}</p>
-          <p>Metcash Layout: ${p["Metcash Layout"] || "-"}</p>
-          <p>Metcash Base Range: ${p["Metcash Base Range"] || "-"}</p>
-          <p>List Price: ${p["List Price"] || "-"}</p>
-          <p>50% Deal: ${p["50% Deal"] || "-"}</p>
+        card.innerHTML = `
+          <img src="${p['Image URL'] || 'https://via.placeholder.com/80'}" alt="Product">
+          <div class="product-info">
+            <p><strong>${p.Product || '-'}</strong></p>
+            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
+            <p>SDA Ranking: ${p['SDA Ranking'] || '-'}</p>
+            <p>Category: ${p['Category'] || '-'}</p>
+            <p>Layout: ${p['Metcash Layout'] || '-'}</p>
+            <p>Base Range: ${p['Metcash Base Range'] || '-'}</p>
+            <p>List Price: ${p['List Price'] || '-'}</p>
+            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+            <p>Status: ${p['Status'] || '-'}</p>
+          </div>
+          <div class="buttons">
+            <button class="add-btn" onclick="addToOffer('${p.Store}','${p.Product}')">Add to Offer</button>
+            <button class="not-btn" onclick="markNotBuying('${p.Store}','${p.Product}')">Not Buying</button>
+          </div>
         `;
-
-        card.appendChild(img);
-        card.appendChild(info);
         container.appendChild(card);
       });
     }
 
-    // Auto-load stored data on page load
-    window.onload = loadData;
+    function addToOffer(store, product) {
+      alert(`✅ ${product} added to offer for ${store}`);
+    }
+
+    function markNotBuying(store, product) {
+      alert(`❌ ${product} marked as Not Buying for ${store}`);
+      // later we can wire this to update the Google Sheet
+    }
+
+    loadData();
   </script>
 </body>
-</html> 
+</html>
