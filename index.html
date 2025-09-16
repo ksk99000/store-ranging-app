@@ -1,351 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Store Ranging App</title>
-<style>
-  :root{
-    --ios-bg:#f6f8fb;
-    --card:#ffffff;
-    --ink:#0a2540;
-    --muted:#6b7a90;
-    --blue:#147aff;
-    --green:#12b886;
-    --red:#ff4d4f;
-    --orange:#ff9f1a;
-    --border:#e6ebf2;
-    --chip:#ecf2ff;
-  }
-  html,body{margin:0;background:var(--ios-bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:980px;margin:0 auto;padding:16px}
-  h1{display:flex;gap:10px;align-items:center;font-weight:800;margin:8px 0 14px}
-  .toolbar{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 16px}
-  .btn{appearance:none;border:0;border-radius:14px;background:var(--blue);color:#fff;font-weight:700;padding:12px 16px;display:inline-flex;gap:10px;align-items:center;box-shadow:0 6px 16px rgba(20,122,255,.18)}
-  .btn.secondary{background:#eef4ff;color:#214b9f;box-shadow:none}
-  .select{width:100%;max-width:600px;display:block;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff}
-  .panel{background:#eef6ff;border-radius:14px;padding:14px 16px;margin:14px 0}
-  .cards{display:grid;gap:14px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;display:grid;grid-template-columns:84px 1fr;gap:14px;align-items:center}
-  .thumb{width:84px;height:84px;border-radius:12px;background:#eef1f6;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .thumb img{width:100%;height:100%;object-fit:cover}
-  .title{font-weight:800;margin:0 0 2px}
-  .meta{color:var(--muted);margin:6px 0 0;font-size:14px}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .chip-toggle{display:flex;background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden}
-  .chip-toggle button{border:0;background:transparent;padding:10px 16px;font-weight:700;color:var(--muted)}
-  .chip-toggle button.active{background:#f2f6ff;color:#1b4de4}
-  .pill{height:12px;background:#e9eef7;border-radius:999px;overflow:hidden}
-  .pill > span{display:block;height:100%}
-  .dots{display:flex;gap:14px;margin-top:8px}
-  .dot{display:flex;align-items:center;gap:6px;color:#223; font-weight:700}
-  .dot i{display:inline-block;width:14px;height:14px;border-radius:50%}
-  .dot.red i{background:var(--red)}
-  .dot.orange i{background:var(--orange)}
-  .dot.green i{background:var(--green)}
-  details{margin-top:8px}
-  summary{cursor:pointer;color:#2d4; font-weight:700}
-  pre{white-space:pre-wrap;background:#fff;border:1px solid var(--border);padding:10px;border-radius:10px}
-  .hidden{display:none !important}
-</style>
+  <meta charset="UTF-8">
+  <title>Store Ranging App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9fbfd;
+      color: #333;
+    }
+    header {
+      background: #007aff;
+      color: white;
+      padding: 14px;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 12px;
+    }
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:active { transform: scale(0.96); }
+    .refresh { background: #007aff; color: white; }
+    .switch { background: #34c759; color: white; }
+    .btn-small {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .btn-small.add { background: #007aff; color: white; }
+    .btn-small.add.added { background: #34c759; }
+    .btn-small.not { background: #ff3b30; color: white; }
+    .section { margin: 16px; }
+    .summary {
+      background: #eaf4ff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    }
+    .thumb {
+      flex: 0 0 70px;
+      height: 70px;
+      border-radius: 8px;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .card .title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .card .meta {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 3px;
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .hidden { display: none; }
+    .debug {
+      background: #fef5e7;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      margin: 16px;
+      color: #666;
+      white-space: pre-wrap;
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>📱 Store Ranging App</h1>
+  <header>📱 Store Ranging App</header>
 
   <div class="toolbar">
-    <button id="refreshBtn" class="btn">🔄 Refresh</button>
-    <button id="switchBtn" class="btn secondary">📊 Switch to Dashboard</button>
+    <button class="refresh" onclick="loadData()">🔄 Refresh</button>
+    <button class="switch" onclick="toggleView()">📊 Switch to Dashboard</button>
   </div>
 
-  <!-- DASHBOARD -->
-  <section id="dashboardView">
-    <h2 style="margin:12px 0 10px;display:flex;align-items:center;gap:8px">📈 Product Dashboard</h2>
-    <div id="dashList" class="cards"></div>
-  </section>
-
-  <!-- STORE VIEW -->
-  <section id="storeView" class="hidden">
+  <div class="section">
     <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" class="select"></select>
+    <select id="storeSelect" onchange="renderStoreView()">
+      <option value="">-- Choose a store --</option>
+    </select>
+  </div>
 
-    <div class="row" style="margin:12px 0">
-      <div class="chip-toggle" role="tablist" aria-label="Status filter">
-        <button id="btnNotRanging" class="active" role="tab" aria-selected="true">🔴 Not Ranging</button>
-        <button id="btnRanging" role="tab" aria-selected="false">🟢 Ranging</button>
-      </div>
-    </div>
+  <div class="section hidden" id="dealSummary">
+    <div class="summary">💰 Total Deal Offer Summary: <span id="totalOffer">$0.00</span></div>
+  </div>
 
-    <div id="summaryPanel" class="panel hidden">
-      <strong>Total Deal Offer Summary</strong>
-      <div style="font-size:20px;font-weight:800;margin-top:6px" id="summaryTotal">$0.00</div>
-    </div>
+  <div class="section" id="storeCards"></div>
 
-    <h2 style="margin:14px 0 6px">Products</h2>
-    <div id="storeCards" class="cards"></div>
+  <div class="section">
+    <h3>🛠️ Debug Output</h3>
+    <div class="debug" id="debugOutput">Loading…</div>
+  </div>
 
-    <details style="margin-top:18px">
-      <summary>🛠 Debug Output</summary>
-      <pre id="debugOut">loading…</pre>
-    </details>
-  </section>
-</div>
+  <script>
+    const scriptUrl = "YOUR_SCRIPT_URL_HERE"; // <-- replace with your Apps Script URL
+    let rawRows = [];
+    let productsIndex = new Map();
+    let selectedStore = "";
+    let offerSet = new Set();
+    let totalOfferValue = 0;
 
-<script>
-const scriptUrl = "YOUR_APPS_SCRIPT_URL_HERE"; // <-- replace with your Apps Script URL
+    const storeSelect = document.getElementById("storeSelect");
+    const storeCards = document.getElementById("storeCards");
+    const totalOffer = document.getElementById("totalOffer");
+    const dealSummary = document.getElementById("dealSummary");
+    const debugOutput = document.getElementById("debugOutput");
 
-// ---------- helpers ----------
-const norm = s => (s ?? "").toString().trim();
-const normStatus = s => norm(s).toLowerCase();
-
-// status buckets (robust: handles case, spaces, synonyms)
-function getBucket(statusRaw){
-  const s = normStatus(statusRaw);
-  const has = (a)=>s.includes(a);
-  const notRanging = has('not') && has('ranging');        // "not ranging"
-  const notBuying  = has('not') && has('buying');         // "not buying"
-  const ranging    = (has('ranging') || has('buying')) && !notRanging; // "ranging","buying","not buying"
-  return { notRanging, notBuying, ranging };
-}
-
-function money(n){
-  const v = Number(n);
-  if(!isFinite(v)) return "$0.00";
-  return v.toLocaleString(undefined,{style:"currency",currency:"USD"});
-}
-
-// ---------- app state ----------
-let rawRows = [];
-let productsIndex = new Map(); // product -> meta from Deals (image, prices, etc.)
-let storeList = [];
-let viewMode = "dashboard"; // "dashboard" | "store"
-let storeFilter = "not";    // "not" | "ranging"
-let selectedStore = "";
-
-// ---------- DOM refs ----------
-const dashList = document.getElementById('dashList');
-const storeView = document.getElementById('storeView');
-const dashboardView = document.getElementById('dashboardView');
-const switchBtn = document.getElementById('switchBtn');
-const refreshBtn = document.getElementById('refreshBtn');
-const storeSelect = document.getElementById('storeSelect');
-const btnNotRanging = document.getElementById('btnNotRanging');
-const btnRanging = document.getElementById('btnRanging');
-const storeCards = document.getElementById('storeCards');
-const debugOut = document.getElementById('debugOut');
-const summaryPanel = document.getElementById('summaryPanel');
-const summaryTotal = document.getElementById('summaryTotal');
-
-// ---------- load ----------
-async function load(){
-  try{
-    const res = await fetch(`${scriptUrl}?t=${Date.now()}`, {cache:"no-store"});
-    const data = await res.json();
-
-    // Expect: { rows:[...], products:[{Product, "Image URL", "50% Deal", ...}] }
-    rawRows = Array.isArray(data.rows) ? data.rows : [];
-    productsIndex = new Map();
-    if(Array.isArray(data.products)){
-      for(const p of data.products){
-        const key = norm(p.Product);
-        if(key) productsIndex.set(key, p);
+    async function loadData() {
+      try {
+        debugOutput.textContent = "Loading...";
+        const res = await fetch(scriptUrl);
+        const data = await res.json();
+        rawRows = data.ranging || [];
+        productsIndex = new Map((data.deals || []).map(d => [d.Product.toLowerCase(), d]));
+        debugOutput.textContent = "Loaded rows: " + rawRows.length;
+        populateStores();
+        if (selectedStore) renderStoreView();
+      } catch (err) {
+        debugOutput.textContent = "Error: " + err;
       }
     }
 
-    // Build store list
-    const set = new Set();
-    rawRows.forEach(r=>{
-      const s = norm(r.Store);
-      if(s) set.add(s);
-    });
-    storeList = Array.from(set).sort((a,b)=>a.localeCompare(b));
-
-    // UI
-    renderDashboard();
-    renderStoreSelect();
-    renderStoreView(); // respects current filter
-
-    debugOut.textContent = JSON.stringify({
-      rows: rawRows.length,
-      example: rawRows[0],
-      productsMeta: productsIndex.size
-    }, null, 2);
-  }catch(err){
-    debugOut.textContent = "Error: " + err;
-  }
-}
-
-// ---------- dashboard ----------
-function renderDashboard(){
-  dashList.innerHTML = "";
-  // Aggregate per product across all stores
-  const tally = new Map(); // product -> {red, orange, green, img}
-  for(const r of rawRows){
-    const product = norm(r.Product);
-    if(!product) continue;
-    const t = tally.get(product) || {red:0, orange:0, green:0};
-    const b = getBucket(r.Status);
-    if(b.notRanging) t.red++;
-    else if(b.notBuying) t.orange++;
-    else if(b.ranging) t.green++;
-
-    // image
-    const meta = productsIndex.get(product);
-    if(meta && !t.img) t.img = norm(meta["Image URL"]);
-    tally.set(product, t);
-  }
-
-  const items = Array.from(tally.entries()).sort((a,b)=>b[1].red - a[1].red);
-  for(const [product, t] of items){
-    const total = t.red + t.orange + t.green || 1;
-    const redPct = (t.red/total)*100;
-    const orangePct = (t.orange/total)*100;
-    const greenPct = 100 - redPct - orangePct;
-
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="thumb">${t.img ? `<img src="${t.img}" alt="">` : "🖼️"}</div>
-      <div>
-        <div class="title">${product}</div>
-        <div class="pill" style="margin-top:10px">
-          <span style="width:${redPct}%;background:var(--red)"></span>
-        </div>
-        <div class="dots">
-          <div class="dot red"><i></i>${t.red}</div>
-          <div class="dot orange"><i></i>${t.orange}</div>
-          <div class="dot green"><i></i>${t.green}</div>
-        </div>
-      </div>
-    `;
-    // Click -> popup of stores not ranging
-    card.style.cursor = "pointer";
-    card.addEventListener('click', ()=>{
-      const notRangingStores = rawRows
-        .filter(r=>norm(r.Product)===product && getBucket(r.Status).notRanging)
-        .map(r=>norm(r.Store))
-        .sort((a,b)=>a.localeCompare(b));
-
-      const list = notRangingStores.length
-        ? `<ul>${notRangingStores.map(s=>`<li>${s}</li>`).join("")}</ul>`
-        : `<em>All stores are buying/ranging.</em>`;
-
-      const modal = document.createElement('div');
-      Object.assign(modal.style,{
-        position:'fixed',inset:'0',background:'rgba(0,0,0,.35)',display:'grid',placeItems:'center',zIndex:9999
+    function populateStores() {
+      const stores = [...new Set(rawRows.map(r => r.Store))];
+      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+      stores.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        storeSelect.appendChild(opt);
       });
-      const sheet = document.createElement('div');
-      Object.assign(sheet.style,{
-        background:'#fff',borderRadius:'16px',maxWidth:'560px',width:'92%',padding:'18px',boxShadow:'0 10px 40px rgba(0,0,0,.2)'
-      });
-      sheet.innerHTML = `<h3 style="margin:0 0 10px">${product}</h3>
-                         <div style="color:var(--muted);margin-bottom:10px">Stores not ranging</div>
-                         <div style="max-height:60vh;overflow:auto">${list}</div>
-                         <div style="text-align:center;margin-top:12px;color:#8894aa"><small>Tap anywhere to close</small></div>`;
-      modal.appendChild(sheet);
-      modal.addEventListener('click', ()=>modal.remove());
-      document.body.appendChild(modal);
-    });
-
-    dashList.appendChild(card);
-  }
-}
-
-// ---------- store view ----------
-function renderStoreSelect(){
-  storeSelect.innerHTML = `<option value="">-- Choose a store --</option>` +
-    storeList.map(s=>`<option>${s}</option>`).join('');
-  // keep previous selection if still present
-  if(selectedStore && storeList.includes(selectedStore)){
-    storeSelect.value = selectedStore;
-  }
-}
-
-function renderStoreView(){
-  // show/hide sections
-  dashboardView.classList.toggle('hidden', viewMode!=="dashboard");
-  storeView.classList.toggle('hidden', viewMode!=="store");
-
-  const store = selectedStore = norm(storeSelect.value);
-  const rowsForStore = rawRows.filter(r=>norm(r.Store)===store);
-
-  // counters (debug & optional future use)
-  const counts = { notRanging:0, notBuying:0, ranging:0 };
-  for(const r of rowsForStore){
-    const b = getBucket(r.Status);
-    if(b.notRanging) counts.notRanging++;
-    else if(b.notBuying) counts.notBuying++;
-    else if(b.ranging) counts.ranging++;
-  }
-
-  // Filter by current chip
-  let list = rowsForStore.filter(r=>{
-    const b = getBucket(r.Status);
-    return (storeFilter==="not") ? b.notRanging : (b.ranging || b.notBuying);
-  });
-
-  // Render cards
-  storeCards.innerHTML = "";
-  if(!store){ summaryPanel.classList.add('hidden'); return; }
-  summaryPanel.classList.remove('hidden'); // visible only when a store is chosen
-
-  if(list.length === 0){
-    storeCards.innerHTML = `<div class="meta">No products found.</div>`;
-  }else{
-    for(const r of list){
-      const product = norm(r.Product);
-      const meta = productsIndex.get(product) || {};
-      const img = norm(meta["Image URL"]);
-      const deal = meta["50% Deal"];
-      const price = meta["List Price"];
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="thumb">${img ? `<img src="${img}" alt="">` : "🖼️"}</div>
-        <div>
-          <div class="title">${product}</div>
-          <div class="meta">Metcash Code: ${meta["Metcash Code"]||"-"}</div>
-          <div class="meta">List Price: ${price ? money(price) : "-"}</div>
-          <div class="meta">50% Deal: ${deal ? money(deal) : "-"}</div>
-        </div>
-      `;
-      storeCards.appendChild(card);
     }
-  }
 
-  // Debug info
-  debugOut.textContent = JSON.stringify({store, filter:storeFilter, counts, sample:list[0]}, null, 2);
+    function norm(str) { return (str || "").toLowerCase().trim(); }
 
-  // Recalc total deal for items marked “Add to Offer” later (placeholder for your logic)
-  summaryTotal.textContent = "$0.00";
-}
+    function renderStoreView() {
+      selectedStore = norm(storeSelect.value);
+      storeCards.innerHTML = "";
+      if (!selectedStore) { dealSummary.classList.add('hidden'); return; }
+      dealSummary.classList.remove('hidden');
 
-// ---------- events ----------
-switchBtn.addEventListener('click', ()=>{
-  viewMode = (viewMode==="dashboard") ? "store" : "dashboard";
-  switchBtn.textContent = (viewMode==="dashboard") ? "📊 Switch to Store View" : "🏠 Switch to Dashboard";
-  renderStoreView();
-  renderDashboard();
-});
-refreshBtn.addEventListener('click', load);
-storeSelect.addEventListener('change', ()=>{ renderStoreView(); });
+      const rows = rawRows.filter(r => norm(r.Store) === selectedStore);
+      if (rows.length === 0) { storeCards.innerHTML = "<div>No products found.</div>"; return; }
 
-btnNotRanging.addEventListener('click', ()=>{
-  storeFilter = "not";
-  btnNotRanging.classList.add('active');
-  btnRanging.classList.remove('active');
-  renderStoreView();
-});
-btnRanging.addEventListener('click', ()=>{
-  storeFilter = "ranging";
-  btnRanging.classList.add('active');
-  btnNotRanging.classList.remove('active');
-  renderStoreView();
-});
+      for (const r of rows) {
+        const product = norm(r.Product);
+        const meta = productsIndex.get(product) || {};
+        const img = meta["Image URL"];
+        const isAdded = offerSet.has(product);
 
-// ---------- start ----------
-load();
-</script>
+        const card = document.createElement('div');
+        card.className = "card";
+        card.innerHTML = `
+          <div class="thumb">${img ? `<img src="${img}">` : "🖼️"}</div>
+          <div>
+            <div class="title">${r.Product}</div>
+            <div class="meta">Metcash Code: ${meta["Metcash Code"] || "-"}</div>
+            <div class="meta">SDA Ranking: ${meta["SDA Ranking"] || "-"}</div>
+            <div class="meta">Category: ${meta["Category"] || "-"}</div>
+            <div class="meta">Layout: ${meta["Metcash Layout"] || "-"}</div>
+            <div class="meta">Base Range: ${meta["Metcash Base Range"] || "-"}</div>
+            <div class="meta">List Price: ${meta["List Price"] || "-"}</div>
+            <div class="meta">50% Deal: ${meta["50% Deal"] || "-"}</div>
+            <div class="meta">Status: ${r.Status || "-"}</div>
+            <div class="button-row">
+              <button class="btn-small add ${isAdded ? "added" : ""}">
+                ${isAdded ? "Added" : "Add to Offer"}
+              </button>
+              <button class="btn-small not">Not Buying</button>
+            </div>
+          </div>`;
+
+        const addBtn = card.querySelector(".add");
+        addBtn.addEventListener("click", () => toggleOffer(product, meta["50% Deal"], addBtn));
+
+        const notBtn = card.querySelector(".not");
+        notBtn.addEventListener("click", () => card.remove());
+
+        storeCards.appendChild(card);
+      }
+    }
+
+    function toggleOffer(product, dealValueRaw, btn) {
+      const val = parseFloat((dealValueRaw || "0").toString().replace(/[^0-9.]/g, "")) || 0;
+      if (offerSet.has(product)) {
+        offerSet.delete(product);
+        totalOfferValue -= val;
+        btn.classList.remove("added");
+        btn.textContent = "Add to Offer";
+      } else {
+        offerSet.add(product);
+        totalOfferValue += val;
+        btn.classList.add("added");
+        btn.textContent = "Added";
+      }
+      totalOffer.textContent = "$" + totalOfferValue.toFixed(2);
+    }
+
+    function toggleView() {
+      alert("Dashboard view not included in this snippet yet. Store view working.");
+    }
+
+    loadData();
+  </script>
 </body>
 </html>
