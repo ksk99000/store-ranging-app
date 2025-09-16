@@ -2,122 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Store Ranging App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Ranging App</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      margin: 0;
-      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #f9fbfd;
-      color: #333;
+      margin: 0; padding: 20px;
     }
-    header {
-      background: #007aff;
-      color: white;
-      padding: 12px;
-      font-size: 18px;
-      font-weight: bold;
-    }
-    .controls {
-      display: flex;
-      gap: 10px;
-      padding: 10px;
-      flex-wrap: wrap;
-    }
-    button {
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .refresh { background: #007aff; color: white; }
-    .offer { background: #007aff; color: white; }
-    .offer.added { background: #28a745; }
-    .notbuying { background: #dc3545; color: white; }
-    .summary {
-      background: #eef6ff;
-      margin: 10px;
-      padding: 10px;
-      border-radius: 6px;
-      display: none; /* only show after store is selected */
-    }
-    .product-card {
+    h1 { color: #007aff; }
+    select, button { margin: 5px 0; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
+    .card {
+      background: #fff;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       display: flex;
       align-items: center;
-      background: white;
-      margin: 10px;
-      padding: 10px;
+    }
+    .card img {
+      width: 80px; height: 80px;
+      object-fit: cover;
       border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-right: 15px;
     }
-    .product-card img {
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
-      margin-right: 12px;
-    }
-    .product-info {
-      flex-grow: 1;
-    }
-    .debug {
-      margin: 10px;
+    .buttons { margin-top: 10px; }
+    .add { background: #007aff; color: white; }
+    .not { background: #ff3b30; color: white; margin-left: 5px; }
+    #debug {
+      margin-top: 20px;
       padding: 10px;
-      background: #fffbe6;
-      border: 1px solid #ffe58f;
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
       border-radius: 6px;
-      font-size: 13px;
-      color: #555;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
-  <header>📱 Store Ranging App</header>
-  <div class="controls">
-    <button class="refresh" onclick="loadData()">Refresh</button>
+  <h1>📱 Store Ranging App</h1>
+  <button onclick="loadData()">🔄 Refresh</button>
+
+  <div>
     <label for="storeSelect">Select a store:</label>
-    <select id="storeSelect" onchange="renderProducts()">
+    <select id="storeSelect" onchange="filterByStore()">
       <option value="">-- Choose a store --</option>
     </select>
   </div>
 
-  <div class="summary" id="dealSummary">
-    <strong>Total Deal Offer Summary</strong>
-    <p id="totalOffer">$0.00</p>
-  </div>
-
+  <h3>Products</h3>
   <div id="products"></div>
 
-  <div class="debug">
-    <strong>🛠 Debug Output</strong>
-    <pre id="debug"></pre>
-  </div>
+  <h3>🛠 Debug Output</h3>
+  <pre id="debug">Loading...</pre>
 
   <script>
-    const scriptUrl = "YOUR_SCRIPT_URL_HERE"; // replace with your Google Apps Script URL
-    let allData = [];
-    let productsData = [];
-    let selectedOffers = {};
+    const scriptUrl = "YOUR_DEPLOYED_SCRIPT_URL"; // replace with your Apps Script URL
+    let allProducts = [];
+    let storeStatus = [];
 
     async function loadData() {
       try {
         const res = await fetch(scriptUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        allData = data;
+
+        if (data.error) {
+          document.getElementById("debug").innerText = "Server error: " + data.error;
+          return;
+        }
+
+        allProducts = data.products;
+        storeStatus = data.status;
+
         populateStores();
-        document.getElementById("debug").textContent =
-          "Loaded " + data.length + " rows.";
+        document.getElementById("debug").innerText =
+          "Loaded " + data.status.length + " ranging rows & " + data.products.length + " products.";
       } catch (err) {
-        document.getElementById("debug").textContent =
-          "Error loading: " + err;
+        document.getElementById("debug").innerText = "Error loading: " + err;
       }
     }
 
     function populateStores() {
       const storeSelect = document.getElementById("storeSelect");
       storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(allData.map(r => r.Store))];
+      const stores = [...new Set(storeStatus.map(r => r.Store))];
       stores.forEach(store => {
         const opt = document.createElement("option");
         opt.value = store;
@@ -126,67 +96,43 @@
       });
     }
 
-    function renderProducts() {
+    function filterByStore() {
       const store = document.getElementById("storeSelect").value;
-      const summary = document.getElementById("dealSummary");
-      if (!store) {
-        productsData = [];
-        document.getElementById("products").innerHTML = "";
-        summary.style.display = "none";
-        return;
-      }
-      summary.style.display = "block";
-      productsData = allData.filter(
-        r => r.Store === store && r.Status === "not ranging"
-      );
       const container = document.getElementById("products");
       container.innerHTML = "";
-      productsData.forEach(p => {
+
+      if (!store) return;
+
+      // Get products not ranging for this store
+      const notRanging = storeStatus.filter(r => r.Store === store && r.Status === "not ranging");
+
+      notRanging.forEach(row => {
+        const product = allProducts.find(p => p.Product === row.Product);
+        if (!product) return;
+
         const card = document.createElement("div");
-        card.className = "product-card";
+        card.className = "card";
         card.innerHTML = `
-          <img src="${p['Image URL'] || ''}" alt="Product">
-          <div class="product-info">
-            <strong>${p['Product'] || 'Unnamed'}</strong>
-            <p>Metcash Code: ${p['Metcash Code'] || '-'}</p>
-            <p>Category: ${p['Category'] || '-'}</p>
-            <p>List Price: ${p['List Price'] || '-'}</p>
-            <p>50% Deal: ${p['50% Deal'] || '-'}</p>
+          <img src="${product['Image URL'] || ''}" alt="Product">
+          <div>
+            <strong>${product['Product']}</strong>
+            <p>Metcash Code: ${product['Metcash Code'] || '-'}</p>
+            <p>SDA Ranking: ${product['SDA Ranking'] || '-'}</p>
+            <p>Category: ${product['Category'] || '-'}</p>
+            <p>List Price: ${product['List Price'] || '-'}</p>
+            <p>50% Deal: ${product['50% Deal'] || '-'}</p>
+            <div class="buttons">
+              <button class="add">Add to Offer</button>
+              <button class="not" onclick="removeProduct(this)">Not Buying</button>
+            </div>
           </div>
-          <button class="offer ${selectedOffers[p['Product']] ? 'added' : ''}"
-            onclick="toggleOffer('${p['Product']}', '${p['50% Deal'] || 0}', this)">
-            ${selectedOffers[p['Product']] ? 'Added' : 'Add to Offer'}
-          </button>
-          <button class="notbuying" onclick="removeProduct('${p['Product']}')">Not Buying</button>
         `;
         container.appendChild(card);
       });
-      updateSummary();
     }
 
-    function toggleOffer(product, deal, btn) {
-      const value = parseFloat((deal || "0").replace(/[^0-9.]/g, "")) || 0;
-      if (selectedOffers[product]) {
-        delete selectedOffers[product];
-        btn.classList.remove("added");
-        btn.textContent = "Add to Offer";
-      } else {
-        selectedOffers[product] = value;
-        btn.classList.add("added");
-        btn.textContent = "Added";
-      }
-      updateSummary();
-    }
-
-    function removeProduct(product) {
-      productsData = productsData.filter(p => p['Product'] !== product);
-      renderProducts();
-    }
-
-    function updateSummary() {
-      const total = Object.values(selectedOffers).reduce((a, b) => a + b, 0);
-      document.getElementById("totalOffer").textContent =
-        "$" + total.toFixed(2);
+    function removeProduct(btn) {
+      btn.closest(".card").remove();
     }
 
     loadData();
