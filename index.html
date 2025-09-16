@@ -181,7 +181,7 @@
   </div>
 
   <script>
-    const scriptUrl = "YOUR_SCRIPT_URL_HERE"; // replace with your Google Apps Script URL
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbzmrOQB4v2qqGFNS872qSV8vOfDE8w2JUSiMk7m8YDqDiWHmZ3WOPaxCQQDZaU0u6mZ8w/exec";
     let allData = [];
     let selectedDeals = {};
     let currentView = "not ranging";
@@ -256,14 +256,10 @@
         img.src = p["Image URL"] || "";
         img.alt = p.Product || "Product";
 
-        const mainLine = document.createElement("div");
-        mainLine.className = "main-line";
-
         const nameEl = document.createElement("strong");
         nameEl.textContent = p.Product || "-";
 
         const btnDiv = document.createElement("div");
-        btnDiv.className = "buttons";
 
         const btnAdd = document.createElement("button");
         btnAdd.className = "add";
@@ -278,11 +274,10 @@
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
 
-        mainLine.appendChild(nameEl);
-        mainLine.appendChild(btnDiv);
-
         card.appendChild(img);
-        card.appendChild(mainLine);
+        card.appendChild(nameEl);
+        card.appendChild(btnDiv);
+
         container.appendChild(card);
       });
     }
@@ -381,15 +376,11 @@
         const counts = document.createElement("div");
         counts.innerHTML = `🔴 ${g.notRanging} | 🟠 ${g.notBuying} | 🟢 ${g.ranging}`;
 
-        const rightDiv = document.createElement("div");
-        rightDiv.style.flex = "1";
-        rightDiv.appendChild(nameEl);
-        rightDiv.appendChild(pill);
-        rightDiv.appendChild(counts);
-
         card.appendChild(img);
-        card.appendChild(rightDiv);
-        card.onclick = () => showStoreModal(g.product.Product);
+        card.appendChild(nameEl);
+        card.appendChild(pill);
+        card.appendChild(counts);
+
         container.appendChild(card);
       });
     }
@@ -407,33 +398,6 @@
         document.getElementById("viewToggleSwitch").textContent = "📊 Switch to Store View";
       }
     }
-
-    function showStoreModal(productName) {
-      const modal = document.getElementById("storeModal");
-      const title = document.getElementById("modalTitle");
-      const list = document.getElementById("storeList");
-      title.textContent = `Stores Not Ranging: ${productName}`;
-      list.innerHTML = "";
-      const stores = allData
-        .filter(item => item.Product === productName && String(item.Status).trim().toLowerCase() === "not ranging")
-        .map(item => item.Store);
-      if (stores.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "No stores found.";
-        list.appendChild(li);
-      } else {
-        stores.forEach(s => {
-          const li = document.createElement("li");
-          li.textContent = s;
-          list.appendChild(li);
-        });
-      }
-      modal.style.display = "flex";
-    }
-
-    document.getElementById("storeModal").addEventListener("click", e => {
-      if (e.target.id === "storeModal") e.currentTarget.style.display = "none";
-    });
 
     loadData();
   </script>
