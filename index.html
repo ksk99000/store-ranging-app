@@ -1,88 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Store Ranging & Deals</title>
+  <title>Store Ranging & Deals App</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-    .loader { border: 4px solid #e5e7eb; border-top: 4px solid #3b82f6; border-radius: 9999px; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    body { font-family: system-ui, sans-serif; }
+    .loader { border: 4px solid #eee; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg) } }
-    .status-bar { height: 8px; border-radius: 4px; margin-top: 6px; }
-    .btn { @apply px-3 py-1 rounded-md text-white text-sm; }
+    .status-bar { height: 6px; border-radius: 4px; margin-top: 4px; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
   <div class="h-screen flex flex-col">
     <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-      <h1 class="text-2xl font-bold leading-tight">Store Ranging App</h1>
+      <h1 class="text-xl font-bold">Store Ranging App</h1>
       <div class="flex gap-2">
-        <button id="btn-dashboard" class="btn bg-slate-600 hover:bg-slate-700">Dashboard 📊</button>
-        <button id="btn-stores" class="btn bg-blue-600 hover:bg-blue-700">Stores 🏬</button>
-        <button id="btn-refresh" class="btn bg-green-600 hover:bg-green-700">Refresh 🔄</button>
+        <button id="btn-dashboard" class="px-3 py-1 bg-slate-600 text-white rounded">Dashboard 📊</button>
+        <button id="btn-stores" class="px-3 py-1 bg-blue-600 text-white rounded">Stores 🏬</button>
+        <button id="btn-refresh" class="px-3 py-1 bg-green-600 text-white rounded">Refresh 🔄</button>
       </div>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
-      <!-- DASHBOARD -->
+      <!-- Dashboard -->
       <section id="view-dashboard">
-        <!-- Summary bar -->
-        <div id="dash-summary" class="mb-4 hidden">
-          <div class="bg-white rounded-lg shadow p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h2 class="font-bold text-lg">Overall Status</h2>
-              <span id="dash-total" class="text-slate-500 text-sm"></span>
-            </div>
-            <!-- stacked bar with counts -->
-            <div class="w-full h-6 bg-slate-200 rounded overflow-hidden relative">
-              <div id="bar-ranging" class="h-full bg-green-500 absolute left-0 top-0"></div>
-              <div id="bar-not" class="h-full bg-red-500 absolute right-0 top-0"></div>
-              <div class="absolute inset-0 flex items-center justify-between px-2 text-xs font-semibold text-white mix-blend-difference">
-                <span id="count-ranging">0</span>
-                <span id="count-not">0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loader -->
         <div id="dash-loader" class="text-center p-10">
           <div class="loader mx-auto"></div>
           <p class="mt-2 text-slate-500">Loading data…</p>
         </div>
-
-        <!-- Product grid -->
         <div id="dash-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
       </section>
 
-      <!-- STORES -->
+      <!-- Stores -->
       <section id="view-stores" class="hidden">
-        <!-- Deal summary -->
         <div id="deal-box" class="hidden mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 class="font-bold text-blue-900 text-lg">Deal Summary</h3>
           <p id="deal-total" class="text-blue-900 font-bold text-2xl mt-1">0 products</p>
           <ul id="deal-list" class="mt-2 text-sm list-disc list-inside space-y-1"></ul>
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <!-- Store list -->
           <div class="lg:col-span-1">
             <div class="bg-white rounded-lg shadow">
-              <div class="p-3 border-b border-slate-200">
-                <h3 class="font-bold">Stores</h3>
-              </div>
+              <div class="p-3 border-b border-slate-200 font-bold">Stores</div>
               <ul id="store-list" class="max-h-[60vh] overflow-y-auto divide-y divide-slate-100"></ul>
             </div>
           </div>
-
-          <!-- Products for selected store -->
           <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow">
               <div class="p-3 border-b border-slate-200">
                 <h3 id="store-title" class="font-bold">Select a store</h3>
-                <p class="text-slate-500 text-sm">Showing <span class="font-semibold">Not Ranging</span> products only</p>
+                <p class="text-slate-500 text-sm">Showing <span class="font-semibold">Not Ranging</span> products</p>
               </div>
               <div id="store-products" class="p-3 grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
@@ -93,233 +62,170 @@
   </div>
 
   <script>
-    // ==== CONFIG ====
-    const DATA_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241";
-    const CACHE_KEY = "rangingData_v1";
-    const CACHE_MS = 5 * 60 * 1000; // 5 minutes
+    const DEALS_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Deals";
+    const RANGING_URL = "https://api.sheetbest.com/sheets/8c337928-5dd1-41bb-9c49-00b1e423f241/tabs/Ranging";
 
-    // ==== STATE ====
-    let rows = [];           // all rows from sheet
-    let selectedDeals = [];  // products selected in store view
-    let currentStore = null;
+    let deals = [];
+    let ranging = [];
+    let merged = [];
+    let selectedDeals = [];
 
-    // ==== HELPERS ====
-    const by = (id) => document.getElementById(id);
-    const safe = (v) => (v === null || v === undefined ? "" : String(v));
+    // Category → Tailwind colour map
+    const categoryColors = {
+      "Cheese": "bg-yellow-200 text-yellow-800",
+      "Butter": "bg-orange-200 text-orange-800",
+      "UHT": "bg-blue-200 text-blue-800",
+      "Specialty": "bg-purple-200 text-purple-800",
+      "Default": "bg-slate-200 text-slate-800"
+    };
 
-    function groupByStore(data) {
-      const map = new Map();
-      data.forEach(r => {
-        const store = safe(r["Store"]).trim();
-        if (!store) return;
-        if (!map.has(store)) map.set(store, []);
-        map.get(store).push(r);
-      });
-      return map;
+    document.getElementById("btn-dashboard").addEventListener("click", () => show("dashboard"));
+    document.getElementById("btn-stores").addEventListener("click", () => show("stores"));
+    document.getElementById("btn-refresh").addEventListener("click", loadData);
+
+    function show(view) {
+      document.getElementById("view-dashboard").classList.toggle("hidden", view !== "dashboard");
+      document.getElementById("view-stores").classList.toggle("hidden", view !== "stores");
     }
 
-    // Simple cache: show cached immediately, refresh in background
-    async function getData() {
+    async function loadData() {
+      document.getElementById("dash-loader").classList.remove("hidden");
+      document.getElementById("dash-grid").classList.add("hidden");
       try {
-        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-        const now = Date.now();
+        const [dealsRes, rangingRes] = await Promise.all([
+          fetch(DEALS_URL),
+          fetch(RANGING_URL)
+        ]);
+        deals = await dealsRes.json();
+        ranging = await rangingRes.json();
 
-        if (cached && (now - cached.timestamp) < CACHE_MS && Array.isArray(cached.data)) {
-          rows = cached.data;
-          renderAll();
-          // background refresh without blocking UI
-          fetchAndRender(true);
-        } else {
-          await fetchAndRender(false);
-        }
-      } catch {
-        await fetchAndRender(false);
-      }
-    }
+        // Pivot Ranging into (Store, Product, Ranging) rows
+        merged = [];
+        ranging.forEach(row => {
+          const store = row["Store"];
+          Object.keys(row).forEach(key => {
+            if (["Store ID","Store","Banner","MSO"].includes(key)) return;
+            const status = row[key];
+            if (!status) return;
+            const productMeta = deals.find(d => d["Product"] === key);
+            if (productMeta) {
+              merged.push({
+                Store: store,
+                Product: key,
+                Ranging: status,
+                ImageURL: productMeta["Image URL"] || "",
+                Category: productMeta["Category"] || "Default"
+              });
+            }
+          });
+        });
 
-    async function fetchAndRender(background) {
-      if (!background) by("dash-loader").classList.remove("hidden");
-      try {
-        const res = await fetch(DATA_URL, { cache: "no-store" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-
-        // Normalise keys we use
-        rows = (Array.isArray(data) ? data : []).map(r => ({
-          Store: safe(r["Store"]),
-          Product: safe(r["Product"]),
-          Ranging: safe(r["Ranging"]),
-          ImageURL: safe(r["Image URL"])
-        }));
-
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: rows }));
-        renderAll();
+        renderDashboard();
+        renderStores();
       } catch (e) {
         console.error(e);
-        by("dash-grid").innerHTML = `<p class="text-red-600">⚠️ Error loading data</p>`;
-        by("dash-grid").classList.remove("hidden");
+        document.getElementById("dash-grid").innerHTML = "<p class='text-red-600'>⚠️ Error loading data</p>";
+        document.getElementById("dash-grid").classList.remove("hidden");
       } finally {
-        by("dash-loader").classList.add("hidden");
+        document.getElementById("dash-loader").classList.add("hidden");
       }
     }
 
-    // ==== DASHBOARD RENDER ====
+    function categoryBadge(cat) {
+      const cls = categoryColors[cat] || categoryColors["Default"];
+      return `<span class="px-2 py-0.5 text-xs rounded ${cls}">${cat}</span>`;
+    }
+
     function renderDashboard() {
-      // counts
-      const total = rows.length;
-      const ranging = rows.filter(r => r.Ranging.toLowerCase() === "ranging").length;
-      const notRanging = total - ranging;
-
-      // summary bar
-      const rangingPct = total ? (ranging / total) * 100 : 0;
-      const notPct = 100 - rangingPct;
-
-      by("dash-summary").classList.remove("hidden");
-      by("dash-total").textContent = `${total} products`;
-      by("count-ranging").textContent = ranging;
-      by("count-not").textContent = notRanging;
-
-      const barR = by("bar-ranging");
-      const barN = by("bar-not");
-      barR.style.width = `${rangingPct}%`;
-      barN.style.width = `${notPct}%`;
-
-      // product grid
-      const grid = by("dash-grid");
+      const grid = document.getElementById("dash-grid");
       grid.innerHTML = "";
-      rows.forEach(item => {
-        const statusGreen = item.Ranging.toLowerCase() === "ranging";
+      merged.forEach(item => {
+        const green = item.Ranging.toLowerCase().includes("ranging") && !item.Ranging.toLowerCase().includes("not");
         const card = document.createElement("div");
-        card.className = "bg-white rounded-lg shadow p-3 flex flex-col";
+        card.className = "bg-white rounded shadow p-3 flex flex-col";
         card.innerHTML = `
           <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
-            <img src="${item.ImageURL}" alt="${item.Product}"
-                 class="w-full h-full object-cover"
-                 onerror="this.src=''; this.parentElement.classList.add('bg-slate-200');">
+            <img src="${item.ImageURL}" alt="${item.Product}" class="w-full h-full object-cover"
+                 onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
           </div>
-          <div class="font-semibold text-sm">${item.Product}</div>
-          <div class="status-bar ${statusGreen ? 'bg-green-500' : 'bg-red-500'}"></div>
-          <div class="text-xs text-slate-500 mt-1">${item.Ranging || 'Unknown'}</div>
+          <div class="font-semibold text-sm mb-1">${item.Product}</div>
+          ${categoryBadge(item.Category)}
+          <div class="status-bar ${green ? 'bg-green-500' : 'bg-red-500'}"></div>
+          <div class="text-xs text-slate-500 mt-1">${item.Ranging}</div>
         `;
         grid.appendChild(card);
       });
       grid.classList.remove("hidden");
     }
 
-    // ==== STORE VIEW RENDER ====
-    function renderStoreList() {
-      const list = by("store-list");
+    function renderStores() {
+      const list = document.getElementById("store-list");
       list.innerHTML = "";
-      const map = groupByStore(rows);
-      const stores = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
-
+      const stores = [...new Set(merged.map(r => r.Store))].sort();
       stores.forEach(store => {
+        const notCount = merged.filter(r => r.Store === store && r.Ranging.toLowerCase().includes("not")).length;
         const li = document.createElement("li");
-        li.className = "p-3 hover:bg-slate-50 cursor-pointer flex items-center justify-between";
-        const notCount = map.get(store).filter(r => r.Ranging.toLowerCase() === "not ranging").length;
-        li.innerHTML = `
-          <span class="font-medium">${store}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full ${notCount ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">
-            ${notCount} not ranging
-          </span>
-        `;
-        li.addEventListener("click", () => showStore(store));
+        li.className = "p-3 hover:bg-slate-50 cursor-pointer flex justify-between";
+        li.innerHTML = `<span>${store}</span><span class="text-xs ${notCount?'text-red-600':'text-green-600'}">${notCount} not ranging</span>`;
+        li.addEventListener("click", () => showStoreProducts(store));
         list.appendChild(li);
       });
     }
 
-    function showStore(store) {
-      currentStore = store;
-      by("store-title").textContent = store ? `Not Ranging — ${store}` : "Select a store";
-      const grid = by("store-products");
+    function showStoreProducts(store) {
+      document.getElementById("store-title").textContent = `Not Ranging — ${store}`;
+      const grid = document.getElementById("store-products");
       grid.innerHTML = "";
-
-      const items = rows.filter(r =>
-        r.Store === store && r.Ranging.toLowerCase() === "not ranging"
-      );
-
-      items.forEach(prod => {
+      const products = merged.filter(r => r.Store === store && r.Ranging.toLowerCase().includes("not"));
+      products.forEach(prod => {
         const chosen = selectedDeals.some(d => d.Store === prod.Store && d.Product === prod.Product);
         const card = document.createElement("div");
-        card.className = "bg-white rounded-lg shadow p-3 flex flex-col";
+        card.className = "bg-white rounded shadow p-3 flex flex-col";
         card.innerHTML = `
           <div class="aspect-[4/3] w-full bg-slate-200 rounded overflow-hidden mb-2">
-            <img src="${prod.ImageURL}" alt="${prod.Product}"
-                 class="w-full h-full object-cover"
-                 onerror="this.src=''; this.parentElement.classList.add('bg-slate-200');">
+            <img src="${prod.ImageURL}" alt="${prod.Product}" class="w-full h-full object-cover"
+                 onerror="this.src='';this.parentElement.classList.add('bg-slate-200');">
           </div>
-          <div class="font-semibold">${prod.Product}</div>
-          <button class="mt-3 px-3 py-1 rounded-md text-white text-sm ${chosen ? 'bg-green-600' : 'bg-blue-600'}">
-            ${chosen ? 'Added' : 'Add to Deal'}
+          <div class="font-semibold mb-1">${prod.Product}</div>
+          ${categoryBadge(prod.Category)}
+          <button class="mt-2 px-3 py-1 rounded text-white text-sm ${chosen?'bg-green-600':'bg-blue-600'}">
+            ${chosen?'Added':'Add to Deal'}
           </button>
         `;
         const btn = card.querySelector("button");
         btn.addEventListener("click", () => toggleDeal(prod, btn));
         grid.appendChild(card);
       });
+      renderDealSummary();
+      show("stores");
     }
 
     function toggleDeal(prod, btn) {
-      const idx = selectedDeals.findIndex(d => d.Store === prod.Store && d.Product === prod.Product);
-      if (idx >= 0) {
-        selectedDeals.splice(idx, 1);
-        btn.textContent = "Add to Deal";
-        btn.className = "mt-3 px-3 py-1 rounded-md text-white text-sm bg-blue-600";
+      const idx = selectedDeals.findIndex(d => d.Store===prod.Store && d.Product===prod.Product);
+      if (idx>=0) {
+        selectedDeals.splice(idx,1);
+        btn.textContent="Add to Deal"; btn.className="mt-2 px-3 py-1 rounded bg-blue-600 text-white";
       } else {
         selectedDeals.push(prod);
-        btn.textContent = "Added";
-        btn.className = "mt-3 px-3 py-1 rounded-md text-white text-sm bg-green-600";
+        btn.textContent="Added"; btn.className="mt-2 px-3 py-1 rounded bg-green-600 text-white";
       }
       renderDealSummary();
     }
 
     function renderDealSummary() {
-      const box = by("deal-box");
-      const total = by("deal-total");
-      const list = by("deal-list");
-
-      if (selectedDeals.length === 0) {
-        box.classList.add("hidden");
-        list.innerHTML = "";
-        total.textContent = "0 products";
-        return;
-      }
-
+      const box=document.getElementById("deal-box"), total=document.getElementById("deal-total"), list=document.getElementById("deal-list");
+      if (selectedDeals.length===0){box.classList.add("hidden");return;}
       box.classList.remove("hidden");
-      total.textContent = `${selectedDeals.length} product${selectedDeals.length > 1 ? 's' : ''}`;
-      list.innerHTML = "";
-      selectedDeals.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = `${p.Product}`;
+      total.textContent = `${selectedDeals.length} product${selectedDeals.length>1?"s":""}`;
+      list.innerHTML="";
+      selectedDeals.forEach(p=>{
+        const li=document.createElement("li");
+        li.innerHTML = `${p.Product} ${categoryBadge(p.Category)}`;
         list.appendChild(li);
       });
     }
 
-    // ==== VIEW SWITCH & MASTER RENDER ====
-    function showDashboard() {
-      by("view-dashboard").classList.remove("hidden");
-      by("view-stores").classList.add("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-    function showStores() {
-      by("view-dashboard").classList.add("hidden");
-      by("view-stores").classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function renderAll() {
-      renderDashboard();
-      renderStoreList();
-      renderDealSummary();
-    }
-
-    // ==== EVENTS ====
-    document.getElementById("btn-dashboard").addEventListener("click", showDashboard);
-    document.getElementById("btn-stores").addEventListener("click", showStores);
-    document.getElementById("btn-refresh").addEventListener("click", () => fetchAndRender(false));
-
-    // ==== START ====
-    getData();
+    loadData();
   </script>
 </body>
 </html>
