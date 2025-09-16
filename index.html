@@ -57,11 +57,18 @@
       z-index: 1000;
     }
     .modal-content {
-      background: #fff;
+      background: rgba(255,255,255,0.5); /* translucent white */
+      backdrop-filter: blur(12px);       /* frosted glass blur */
+      -webkit-backdrop-filter: blur(12px); /* safari support */
       padding: 20px;
-      border-radius: 6px;
-      max-width: 400px;
+      border-radius: 16px;              /* rounder corners */
+      max-width: 420px;
       width: 90%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    }
+    .modal-content h3 {
+      margin-top: 0;
+      font-size: 1.2em;
     }
   </style>
 </head>
@@ -102,7 +109,6 @@
         const res = await fetch(scriptUrl);
         allData = await res.json();
 
-        // Build dropdown
         const stores = [...new Set(allData.map(r => r.Store))].filter(s => s);
         const storeSelect = document.getElementById("storeSelect");
         storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
@@ -116,7 +122,6 @@
         productsDiv.innerHTML = "Select a store to view Not Ranging products.";
       } catch (err) {
         productsDiv.innerHTML = "Error loading data: " + err;
-        console.error("Fetch error:", err);
       }
     }
 
