@@ -166,20 +166,24 @@
         btnNot.textContent = "Not Buying";
         btnNot.onclick = function(e) {
           e.stopPropagation();
-          updateStatus(card, p, "Not Buying");
+          updateStatus(p, "Not Buying");
         };
 
-        const btnRestore = document.createElement("button");
-        btnRestore.className = "restore";
-        btnRestore.textContent = "Restore";
-        btnRestore.onclick = function(e) {
-          e.stopPropagation();
-          updateStatus(card, p, "Ranging");
-        };
+        // Restore button only if product is currently Not Buying
+        const statusVal = String(p.Status).trim().toLowerCase();
+        if (statusVal === "not buying") {
+          const btnRestore = document.createElement("button");
+          btnRestore.className = "restore";
+          btnRestore.textContent = "Restore";
+          btnRestore.onclick = function(e) {
+            e.stopPropagation();
+            updateStatus(p, "Ranging");
+          };
+          btnDiv.appendChild(btnRestore);
+        }
 
         btnDiv.appendChild(btnAdd);
         btnDiv.appendChild(btnNot);
-        btnDiv.appendChild(btnRestore);
 
         mainLine.appendChild(nameEl);
         mainLine.appendChild(btnDiv);
@@ -244,9 +248,7 @@
       });
     }
 
-    function updateStatus(cardElem, productObj, newStatus) {
-      cardElem.remove();
-
+    function updateStatus(productObj, newStatus) {
       fetch(scriptUrl, {
         method: "POST",
         body: JSON.stringify({
@@ -259,7 +261,10 @@
         }
       })
       .then(r => r.text())
-      .then(t => console.log("Server response:", t))
+      .then(t => {
+        console.log("Server response:", t);
+        loadData(); // reload so product moves to correct list immediately
+      })
       .catch(err => console.error("Error updating sheet:", err));
     }
 
