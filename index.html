@@ -2,82 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>📱 Store Ranging App v1.0.0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📱 Store Ranging App</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      background: #f7f9fc;
-      margin: 0;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8fafc;
       color: #333;
     }
     h1 {
-      color: #007aff;
-      font-size: 22px;
-      margin-bottom: 5px;
-    }
-    .version {
-      font-size: 13px;
-      color: #999;
-      margin-bottom: 15px;
+      color: #0056d6;
     }
     button {
-      background: #007aff;
+      background: #007bff;
+      color: white;
       border: none;
-      color: #fff;
-      padding: 10px 16px;
+      padding: 10px 15px;
       margin: 5px;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
     }
     button:hover {
-      background: #005bbb;
+      background: #0056b3;
     }
     select {
       padding: 8px;
+      margin: 10px 0;
       border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 15px;
-      margin: 5px 0;
     }
     .product {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
       display: flex;
       align-items: center;
       background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      margin: 10px 0;
-      padding: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .product img {
-      width: 60px;
-      height: 60px;
-      object-fit: contain;
+      width: 80px;
+      height: 80px;
+      margin-right: 15px;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+    .product-info {
+      flex: 1;
+    }
+    .version {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #666;
+      background: #eef2f7;
+      padding: 3px 8px;
       border-radius: 6px;
-      margin-right: 12px;
     }
-    .actions button {
-      margin-left: 6px;
-    }
-    #debug {
-      margin-top: 20px;
-      background: #fafafa;
-      padding: 12px;
-      border-radius: 8px;
-      font-family: monospace;
-      font-size: 13px;
-      border: 1px solid #ddd;
+    .debug {
+      font-size: 12px;
+      color: #555;
+      margin-top: 15px;
+      background: #f1f3f6;
+      padding: 8px;
+      border-radius: 6px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h1>📱 Store Ranging App</h1>
-  <div class="version">Version: v1.0.0 (17 Sept 2025)</div>
+  <div class="version">v1.0.0</div>
 
+  <h1>📱 Store Ranging App</h1>
   <button onclick="loadData()">🔄 Refresh</button>
-  <select id="storeSelect" onchange="renderProducts()">
+  <select id="storeSelect" onchange="filterByStore()">
     <option value="">-- Choose a store --</option>
   </select>
 
@@ -85,76 +87,68 @@
   <div id="productList"></div>
 
   <h3>🛠 Debug Output</h3>
-  <div id="debug">Waiting for data…</div>
+  <div class="debug" id="debugOutput">Waiting for data...</div>
 
-<script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2a7r1uV7_WdypuPWlR0TNsv_8dlp70naBfdcAnA6xzKWFD6nwrx9gyP3YdVsMUGUchQ/exec";
-let allData = [];
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbw2a7r1uV7_WdypuPWlR0TNsv_8dlp70naBfdcAnA6xzKWFD6nwrx9gyP3YdVsMUGUchQ/exec";
 
-async function loadData() {
-  document.getElementById("debug").innerText = "Loading...";
-  try {
-    const res = await fetch(SCRIPT_URL);
-    const data = await res.json();
-    allData = data;
-    document.getElementById("debug").innerText = 
-      "Loaded " + (allData.ranging ? allData.ranging.length : 0) + " ranging rows & " +
-      (allData.deals ? allData.deals.length : 0) + " products.";
-    populateStores();
-  } catch (err) {
-    document.getElementById("debug").innerText = "Error loading: " + err;
-  }
-}
+    let allData = { ranging: [] };
 
-function populateStores() {
-  const storeSelect = document.getElementById("storeSelect");
-  storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
-  if (allData.ranging) {
-    const stores = [...new Set(allData.ranging.map(r => r.Store))];
-    stores.forEach(store => {
-      const opt = document.createElement("option");
-      opt.value = store;
-      opt.textContent = store;
-      storeSelect.appendChild(opt);
-    });
-  }
-}
+    async function loadData() {
+      document.getElementById("debugOutput").textContent = "Loading...";
+      try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        allData = data;
 
-function renderProducts() {
-  const store = document.getElementById("storeSelect").value;
-  const container = document.getElementById("productList");
-  container.innerHTML = "";
-  if (!store || !allData.ranging || !allData.deals) return;
+        document.getElementById("debugOutput").textContent = 
+          `Loaded ${data.ranging?.length || 0} ranging rows & ${data.products?.length || 0} products.`;
 
-  const storeRows = allData.ranging.filter(r => r.Store === store);
-  storeRows.forEach(row => {
-    const product = allData.deals.find(p => p.Product === row.Product);
-    if (!product) return;
+        populateStores(data.ranging || []);
+      } catch (err) {
+        document.getElementById("debugOutput").textContent = "Error loading: " + err;
+      }
+    }
 
-    const div = document.createElement("div");
-    div.className = "product";
-    div.innerHTML = `
-      <img src="${product.ImageURL}" alt="Product">
-      <div>
-        <div><strong>${product.Product}</strong></div>
-        <div>Status: ${row.Status}</div>
-        <div class="actions">
-          <button onclick="addToOffer('${product.Product}')">Add to Offer</button>
-          <button onclick="notBuying('${product.Product}')">Not Buying</button>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
+    function populateStores(rangingData) {
+      const storeSelect = document.getElementById("storeSelect");
+      storeSelect.innerHTML = '<option value="">-- Choose a store --</option>';
+      const stores = [...new Set(rangingData.map(r => r.Store))];
+      stores.forEach(store => {
+        const opt = document.createElement("option");
+        opt.value = store;
+        opt.textContent = store;
+        storeSelect.appendChild(opt);
+      });
+    }
 
-function addToOffer(product) {
-  alert(product + " added to offer!");
-}
+    function filterByStore() {
+      const store = document.getElementById("storeSelect").value;
+      const productList = document.getElementById("productList");
+      productList.innerHTML = "";
+      if (!store) return;
 
-function notBuying(product) {
-  alert(product + " marked as Not Buying!");
-}
-</script>
+      const products = allData.ranging.filter(r => r.Store === store);
+      if (products.length === 0) {
+        productList.innerHTML = "<p>No products found for this store.</p>";
+        return;
+      }
+
+      products.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "product";
+        div.innerHTML = `
+          <img src="${p['Image URL'] || ''}" alt="product">
+          <div class="product-info">
+            <strong>${p.Product}</strong><br>
+            Status: ${p.Status || "Unknown"}
+          </div>
+        `;
+        productList.appendChild(div);
+      });
+    }
+
+    loadData();
+  </script>
 </body>
 </html>
