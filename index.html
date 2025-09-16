@@ -13,6 +13,7 @@
   </header>
 
   <main class="p-4">
+    <!-- Deal Offer Summary -->
     <div id="deal-offer-box" class="mb-4 p-4 bg-blue-100 border border-blue-200 rounded-lg hidden">
       <h3 class="font-bold text-lg text-blue-800">Total Deal Offer Summary</h3>
       <p class="text-sm text-blue-600">Based on 50% Deal Price</p>
@@ -20,11 +21,13 @@
       <ul id="deal-list" class="mt-2 text-sm list-disc list-inside text-slate-700 space-y-1"></ul>
     </div>
 
+    <!-- Store Selector -->
     <div class="mb-4">
       <label class="block mb-2 font-semibold">Select a store</label>
       <select id="store-select" class="w-full border rounded p-2"></select>
     </div>
 
+    <!-- Product List -->
     <div id="product-grid" class="space-y-3"></div>
   </main>
 
@@ -37,6 +40,7 @@
     let dealsIndex = new Map();
     let selectedDeals = {};
 
+    // Normalize product names for reliable matching
     function normName(s) {
       return String(s || "")
         .replace(/^[*"'`]+/, "")
@@ -104,14 +108,23 @@
               <div class="text-xs text-slate-600">Metcash Code: ${metcashCode}</div>
               <div class="text-xs text-slate-600">50% Deal: $${fiftyPercentDeal}</div>
             </div>
-            <button class="px-3 py-1 rounded text-white text-sm ${isSelected ? 'bg-green-600' : 'bg-blue-600'}">
-              ${isSelected ? 'Added' : 'Add to Offer'}
-            </button>
+            <div class="flex flex-col space-y-1">
+              <button class="px-3 py-1 rounded text-white text-sm ${isSelected ? 'bg-green-600' : 'bg-blue-600'} deal-btn">
+                ${isSelected ? 'Added' : 'Add to Offer'}
+              </button>
+              <button class="px-3 py-1 rounded text-white text-sm bg-red-600 notbuy-btn">
+                Not Buying
+              </button>
+            </div>
           </div>
         `;
 
-        const btn = card.querySelector("button");
-        btn.addEventListener("click", () => toggleDeal(productName, fiftyPercentDeal, btn));
+        const addBtn = card.querySelector(".deal-btn");
+        addBtn.addEventListener("click", () => toggleDeal(productName, fiftyPercentDeal, addBtn));
+
+        const notBuyBtn = card.querySelector(".notbuy-btn");
+        notBuyBtn.addEventListener("click", () => markNotBuying(store, productName, card));
+
         grid.appendChild(card);
       });
 
@@ -150,6 +163,27 @@
         list.appendChild(li);
       });
       totalEl.textContent = `$${total.toFixed(2)}`;
+    }
+
+    // 🔴 New function: Mark product as Not Buying
+    async function markNotBuying(store, product, cardElement) {
+      try {
+        const res = await fetch(webAppUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ store, product })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+          // Remove product from the list
+          cardElement.remove();
+        } else {
+          alert("Failed to update: " + result.error);
+        }
+      } catch (err) {
+        alert("Error sending update: " + err.message);
+      }
     }
 
     document.getElementById("store-select").addEventListener("change", e => {
