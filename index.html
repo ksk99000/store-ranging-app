@@ -1,149 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Store Ranging App - iOS 26 Theme</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Arial, sans-serif; 
-      padding: 20px; 
-      background: linear-gradient(135deg, #fdfdfd, #f5f9ff);
-      color: #1c1c1e;
-    }
-    h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color:#007aff; }
-    button, select {
-      padding: 10px 14px;
-      margin: 6px 4px 6px 0;
-      border-radius: 12px;
-      border: none;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    button { background: #007aff; color: white; }
-    button:hover { background: #0063cc; }
-    select { background: white; border: 1px solid #ccc; }
+    body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,sans-serif;padding:20px;background:linear-gradient(135deg,#fdfdfd,#f5f9ff);color:#1c1c1e}
+    h1{font-size:24px;font-weight:700;margin-bottom:12px;color:#007aff}
+    button,select{padding:10px 14px;margin:6px 4px 6px 0;border-radius:12px;border:none;font-size:15px;font-weight:500;cursor:pointer;transition:all .2s}
+    button{background:#007aff;color:#fff}
+    button:hover{background:#0063cc}
+    select{background:#fff;border:1px solid #ccc}
 
-    /* Base card */
-    .card {
-      border-radius: 16px;
-      margin: 10px 0;
-      padding: 14px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      background: rgba(255,255,255,0.9);
-    }
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
-    }
-    .card img {
-      width: 70px; height: 70px;
-      object-fit: contain;
-      border-radius: 12px;
-      background: #f2f2f7;
-      flex-shrink: 0;
-    }
+    .card{border-radius:16px;margin:10px 0;padding:14px;display:flex;align-items:center;gap:12px;backdrop-filter:blur(20px);box-shadow:0 4px 8px rgba(0,0,0,.06);cursor:pointer;transition:transform .2s,box-shadow .2s;background:rgba(255,255,255,.9)}
+    .card:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(0,0,0,.1)}
+    .card img{width:70px;height:70px;object-fit:contain;border-radius:12px;background:#f2f2f7;flex-shrink:0}
+    .card.not-ranging{background:#ffecec}
+    .card.not-buying{background:#fff4e5}
+    .card.ranging{background:#ecffec}
 
-    /* Color-coded cards (store view) */
-    .card.not-ranging { background: #ffecec; }  /* light red */
-    .card.not-buying  { background: #fff4e5; }  /* light orange */
-    .card.ranging     { background: #ecffec; }  /* light green */
+    .add{background:#007aff;color:#fff}
+    .add.added{background:#34c759}
+    .not{background:#ff3b30;color:#fff}
+    .restore{background:#ff9500;color:#fff}
 
-    /* Buttons */
-    .add { background: #007aff; color:#fff; }
-    .add.added { background: #34c759; }
-    .not { background: #ff3b30; color:#fff; }
-    .restore { background: #ff9500; color:#fff; }
+    .summary{background:rgba(255,255,255,.95);backdrop-filter:blur(20px);border-radius:16px;padding:16px;box-shadow:0 4px 8px rgba(0,0,0,.06);margin:15px 0;display:none;border-left:5px solid #007aff}
 
-    /* Summary */
-    .summary {
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(20px);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.06);
-      margin: 15px 0;
-      display: none;
-      border-left: 5px solid #007aff;
-    }
+    .toggle-group{display:flex;background:#e5e5ea;border-radius:10px;padding:2px;width:fit-content;margin:10px 0}
+    .toggle-btn{flex:1;padding:8px 14px;border:none;border-radius:8px;background:transparent;color:#007aff;font-weight:600;cursor:pointer;transition:all .2s}
+    .toggle-btn.active{background:#fff;color:#007aff;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 
-    /* Segmented control */
-    .toggle-group {
-      display: flex;
-      background: #e5e5ea;
-      border-radius: 10px;
-      padding: 2px;
-      width: fit-content;
-      margin: 10px 0;
-    }
-    .toggle-btn {
-      flex: 1;
-      padding: 8px 14px;
-      border: none;
-      border-radius: 8px;
-      background: transparent;
-      color: #007aff;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .toggle-btn.active {
-      background: white;
-      color: #007aff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
+    #storeModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.35);align-items:flex-end;justify-content:center}
+    #storeModalContent{background:#fff;width:100%;max-height:60%;border-top-left-radius:20px;border-top-right-radius:20px;padding:20px;overflow:auto;animation:slideUp .25s ease;box-shadow:0 -2px 10px rgba(0,0,0,.15)}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 
-    /* Modal sheet (FIXED: only one display rule, hidden by default) */
-    #storeModal {
-      display: none;                 /* keep hidden until JS opens it */
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.35);
-      align-items: flex-end; justify-content: center;
-    }
-    #storeModalContent {
-      background:#fff;
-      width:100%;
-      max-height:60%;
-      border-top-left-radius:20px;
-      border-top-right-radius:20px;
-      padding:20px;
-      overflow:auto;
-      animation: slideUp 0.25s ease;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
-    }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to   { transform: translateY(0); }
-    }
+    #debug{background:#fff;border-radius:12px;padding:12px;font-size:12px;margin-top:20px;box-shadow:inset 0 1px 3px rgba(0,0,0,.08);white-space:pre-wrap}
 
-    /* Debug */
-    #debug {
-      background:#fff;
-      border-radius:12px;
-      padding:12px;
-      font-size:12px;
-      margin-top:20px;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
-      white-space: pre-wrap;
-    }
-
-    /* Pill graph colors (dashboard) */
-    .pill-red { background:#ff3b30; }
-    .pill-orange { background:#ff9500; }
-    .pill-green { background:#34c759; }
+    .pill-red{background:#ff3b30}.pill-orange{background:#ff9500}.pill-green{background:#34c759}
   </style>
 </head>
 <body>
-
   <h1>📱 Store Ranging App</h1>
   <button onclick="loadData()">🔄 Refresh</button>
   <button id="viewToggleSwitch" onclick="toggleView()">📊 Switch to Store View</button>
@@ -170,12 +66,12 @@
   <div id="products"></div>
 
   <!-- Dashboard -->
-  <div id="dashboard" style="display:none; margin-top:20px;">
+  <div id="dashboard" style="display:none;margin-top:20px;">
     <h2 style="color:#007aff;">📊 Product Dashboard</h2>
     <div id="dashboardContent"></div>
   </div>
 
-  <!-- Modal (hidden until a product is clicked) -->
+  <!-- Modal -->
   <div id="storeModal">
     <div id="storeModalContent">
       <h3 id="modalTitle" style="color:#007aff;">Stores Not Ranging</h3>
@@ -183,7 +79,6 @@
     </div>
   </div>
 
-  <!-- Debug -->
   <div>
     <h3 style="color:#007aff;">🛠 Debug Output</h3>
     <div id="debug">Waiting for data...</div>
@@ -196,31 +91,71 @@
     let currentView = "not ranging";
     let currentMode = "dashboard";
 
+    /* ----- Helpers ----- */
+    function normalizeStatus(raw) {
+      const s = String(raw ?? "").trim().toLowerCase()
+        .replace(/\s+/g, " ")
+        .replace(/[-_]/g, " "); // treat hyphen/underscore as space
+
+      // canonical buckets
+      const rangingAliases = new Set(["ranging","range","ranged","yes","y","buying","stocked","in range"]);
+      const notRangingAliases = new Set(["not ranging","not range","not ranged","no","n","nr","out of range","oor","missing"]);
+      const notBuyingAliases = new Set(["not buying","no buys","nb","declined","on hold"]);
+
+      if (rangingAliases.has(s)) return "ranging";
+      if (notRangingAliases.has(s)) return "not ranging";
+      if (notBuyingAliases.has(s)) return "not buying";
+
+      // common phrase forms
+      if (s.includes("not") && s.includes("buy")) return "not buying";
+      if (s.includes("not") && s.includes("rang")) return "not ranging";
+      if (s.includes("rang") || s === "yes") return "ranging";
+
+      return "unknown";
+    }
+
+    function getKey(obj, key) {
+      return obj[key] ?? obj[key.toLowerCase()] ?? obj[key.toUpperCase()];
+    }
+
+    /* ----- Data load ----- */
     async function loadData() {
       try {
-        document.getElementById("debug").textContent = "Loading data...";
-        const resp = await fetch(scriptUrl);
+        setDebug("Loading data...");
+        const resp = await fetch(scriptUrl, { cache: "no-store" });
         const json = await resp.json();
         allData = json;
-        document.getElementById("debug").textContent = JSON.stringify(allData, null, 2);
+
+        // Show status mix to help diagnose
+        const counts = {};
+        for (const row of allData) {
+          const norm = normalizeStatus(getKey(row,"Status"));
+          counts[norm] = (counts[norm] || 0) + 1;
+        }
+        setDebug("Loaded rows: " + allData.length + "\nStatus counts: " + JSON.stringify(counts, null, 2));
+
         populateStores();
         resetSummary();
         showDashboard();
       } catch (err) {
-        document.getElementById("debug").textContent = "Error fetching data: " + err;
+        setDebug("Error fetching data: " + err);
       }
+    }
+
+    function setDebug(msg) {
+      document.getElementById("debug").textContent = msg;
     }
 
     function populateStores() {
       const select = document.getElementById("storeSelect");
       select.innerHTML = '<option value="">-- Choose a store --</option>';
-      const stores = [...new Set(allData.map(d => d.Store))].sort();
-      stores.forEach(storeName => {
+      const stores = [...new Set(allData.map(d => getKey(d,"Store")))].filter(Boolean).sort();
+      for (const storeName of stores) {
         const opt = document.createElement("option");
         opt.value = storeName;
         opt.textContent = storeName;
         select.appendChild(opt);
-      });
+      }
     }
 
     function resetSummary() {
@@ -235,6 +170,7 @@
       renderProducts();
     }
 
+    /* ----- Store view ----- */
     function renderProducts() {
       document.getElementById("dashboard").style.display = "none";
       document.getElementById("storeControls").style.display = "block";
@@ -245,10 +181,10 @@
       if (!storeName) return;
 
       const filtered = allData.filter(item => {
-        if (item.Store !== storeName) return false;
-        const status = String(item.Status).trim().toLowerCase();
-        if (currentView === "not ranging") return status === "not ranging";
-        if (currentView === "ranging")   return status === "ranging" || status === "not buying";
+        if (getKey(item,"Store") !== storeName) return false;
+        const st = normalizeStatus(getKey(item,"Status"));
+        if (currentView === "not ranging") return st === "not ranging";
+        if (currentView === "ranging")     return st === "ranging" || st === "not buying";
         return false;
       });
 
@@ -257,17 +193,17 @@
         return;
       }
 
-      filtered.forEach(p => {
-        const statusVal = String(p.Status).trim().toLowerCase();
+      for (const p of filtered) {
+        const st = normalizeStatus(getKey(p,"Status"));
         const card = document.createElement("div");
-        card.className = "card " + (statusVal === "not ranging" ? "not-ranging" : statusVal === "not buying" ? "not-buying" : "ranging");
+        card.className = "card " + (st === "not ranging" ? "not-ranging" : st === "not buying" ? "not-buying" : st === "ranging" ? "ranging" : "");
 
         const img = document.createElement("img");
-        img.src = p["Image URL"] || "";
-        img.alt = p.Product || "Product";
+        img.src = getKey(p,"Image URL") || "";
+        img.alt = getKey(p,"Product") || "Product";
 
         const nameEl = document.createElement("strong");
-        nameEl.textContent = p.Product || "-";
+        nameEl.textContent = getKey(p,"Product") || "-";
 
         const btnDiv = document.createElement("div");
 
@@ -289,18 +225,18 @@
         card.appendChild(btnDiv);
 
         container.appendChild(card);
-      });
+      }
     }
 
     function toggleOffer(btn, productObj) {
-      const productName = productObj["Product"];
-      const dealValue = parseFloat(productObj["50% Deal"]) || 0;
+      const name = getKey(productObj,"Product");
+      const deal = parseFloat(getKey(productObj,"50% Deal")) || 0;
       if (btn.classList.contains("added")) {
-        delete selectedDeals[productName];
+        delete selectedDeals[name];
         btn.classList.remove("added");
         btn.textContent = "Add to Offer";
       } else {
-        selectedDeals[productName] = dealValue;
+        selectedDeals[name] = deal;
         btn.classList.add("added");
         btn.textContent = "Added";
       }
@@ -308,34 +244,33 @@
     }
 
     function updateSummary() {
-      const total = Object.values(selectedDeals).reduce((a, b) => a + b, 0);
+      const total = Object.values(selectedDeals).reduce((a,b)=>a+b,0);
       document.getElementById("total").textContent = total.toFixed(2);
-
       const list = document.getElementById("offerList");
       list.innerHTML = "";
-      Object.entries(selectedDeals).forEach(([name, value]) => {
+      for (const [name,val] of Object.entries(selectedDeals)) {
         const li = document.createElement("li");
-        li.textContent = `${name} - $${value.toFixed(2)}`;
+        li.textContent = `${name} - $${val.toFixed(2)}`;
         list.appendChild(li);
-      });
+      }
     }
 
     function updateStatus(productObj, newStatus) {
       fetch(scriptUrl, {
         method: "POST",
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-          Store: productObj.Store,
-          Product: productObj.Product,
+          Store: getKey(productObj,"Store"),
+          Product: getKey(productObj,"Product"),
           Status: newStatus
-        }),
-        headers: { "Content-Type": "application/json" }
+        })
       })
-      .then(r => r.text())
-      .then(() => loadData())
-      .catch(err => console.error("Error updating sheet:", err));
+      .then(r=>r.text())
+      .then(()=>loadData())
+      .catch(err=>setDebug("Error updating sheet: " + err));
     }
 
-    /* DASHBOARD */
+    /* ----- Dashboard ----- */
     function showDashboard() {
       currentMode = "dashboard";
       document.getElementById("dashboard").style.display = "block";
@@ -347,24 +282,24 @@
       const container = document.getElementById("dashboardContent");
       container.innerHTML = "";
 
-      // Group by product and count statuses
       const grouped = {};
-      allData.forEach(item => {
-        const product = item.Product;
-        const status = String(item.Status).trim().toLowerCase();
+      for (const item of allData) {
+        const product = getKey(item,"Product");
+        if (!product) continue;
+        const status = normalizeStatus(getKey(item,"Status"));
         if (!grouped[product]) grouped[product] = { product: item, ranging: 0, notRanging: 0, notBuying: 0 };
-        if (status === "ranging") grouped[product].ranging++;
+        if      (status === "ranging")     grouped[product].ranging++;
         else if (status === "not ranging") grouped[product].notRanging++;
-        else if (status === "not buying") grouped[product].notBuying++;
-      });
+        else if (status === "not buying")  grouped[product].notBuying++;
+      }
 
-      Object.values(grouped).forEach(g => {
+      for (const g of Object.values(grouped)) {
         const card = document.createElement("div");
-        card.className = "card"; // neutral look on dashboard
+        card.className = "card"; // neutral on dashboard
 
         const img = document.createElement("img");
-        img.src = g.product["Image URL"] || "";
-        img.alt = g.product.Product || "Product";
+        img.src = getKey(g.product,"Image URL") || "";
+        img.alt = getKey(g.product,"Product") || "Product";
 
         const right = document.createElement("div");
         right.style.display = "flex";
@@ -373,7 +308,7 @@
         right.style.flex = "1";
 
         const nameEl = document.createElement("strong");
-        nameEl.textContent = g.product.Product || "-";
+        nameEl.textContent = getKey(g.product,"Product") || "-";
 
         const pill = document.createElement("div");
         pill.style.display = "flex";
@@ -382,11 +317,11 @@
         pill.style.width = "300px";
         pill.style.height = "20px";
 
-        const total = g.ranging + g.notRanging + g.notBuying || 1;
-        const seg = (count, colorClass) => {
+        const total = (g.ranging + g.notRanging + g.notBuying) || 1;
+        const seg = (count, cls) => {
           const div = document.createElement("div");
-          div.style.width = (count / total * 100) + "%";
-          div.className = colorClass;
+          div.style.width = (count/total*100) + "%";
+          div.className = cls;
           div.title = count;
           return div;
         };
@@ -403,11 +338,11 @@
         right.appendChild(counts);
         card.appendChild(right);
 
-        // Clicking a product opens the modal with stores NOT RANGING
-        card.addEventListener("click", () => showStoreModal(g.product.Product));
+        // Click → modal with stores NOT RANGING that product
+        card.addEventListener("click", () => showStoreModal(getKey(g.product,"Product")));
 
         container.appendChild(card);
-      });
+      }
     }
 
     function toggleView() {
@@ -424,7 +359,7 @@
       }
     }
 
-    /* MODAL: show list of stores NOT RANGING for a product */
+    /* ----- Modal (stores not ranging) ----- */
     function showStoreModal(productName) {
       const modal = document.getElementById("storeModal");
       const title = document.getElementById("modalTitle");
@@ -433,30 +368,28 @@
       list.innerHTML = "";
 
       const stores = allData
-        .filter(item => item.Product === productName && String(item.Status).trim().toLowerCase() === "not ranging")
-        .map(item => item.Store);
+        .filter(item => getKey(item,"Product") === productName && normalizeStatus(getKey(item,"Status")) === "not ranging")
+        .map(item => getKey(item,"Store"));
 
       if (stores.length === 0) {
         const li = document.createElement("li");
         li.textContent = "No stores found.";
         list.appendChild(li);
       } else {
-        stores.forEach(s => {
+        for (const s of stores) {
           const li = document.createElement("li");
           li.textContent = s;
           list.appendChild(li);
-        });
+        }
       }
 
-      // Open modal (as flex)
       modal.style.display = "flex";
       modal.style.alignItems = "flex-end";
       modal.style.justifyContent = "center";
     }
 
-    // Close modal when clicking on the dimmed background
-    document.getElementById("storeModal").addEventListener("click", function(e) {
-      if (e.target === this) this.style.display = "none";
+    document.getElementById("storeModal").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = "none";
     });
 
     loadData();
