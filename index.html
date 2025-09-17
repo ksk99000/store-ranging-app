@@ -4,65 +4,54 @@
   <meta charset="UTF-8">
   <title>📱 Store Ranging App</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f9fc; }
     h1 { color: #007bff; }
-    select, button { padding: 8px; margin: 5px; }
-    #debug { white-space: pre-wrap; background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 10px; }
-    .error { color: red; }
-    .success { color: green; }
-    .version { font-size: 0.8em; color: gray; }
+    #version { font-size: 0.9em; color: gray; }
+    select, button { margin: 10px 0; padding: 8px; }
+    #debug { margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
   </style>
 </head>
 <body>
-  <h1>📱 Store Ranging App <span class="version">v2.3.0 (17 Sept 2025)</span></h1>
-
+  <h1>📱 Store Ranging App <span id="version">v2.3.0 (17 Sept 2025)</span></h1>
   <button onclick="loadData()">🔄 Refresh</button>
   <select id="storeSelect">
-    <option>-- Select a store --</option>
+    <option value="">-- Select a store --</option>
   </select>
 
   <h2>Products</h2>
   <div id="products"></div>
 
-  <h3>🛠️ Debug Output</h3>
-  <div id="debug">Waiting for data…</div>
+  <h2>🛠 Debug Output</h2>
+  <div id="debug"></div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwX05hFhJaGxwQl6X_ifm66MUb-PBBAfvvsQzSnUFQiS3lG-0dSdqN3ddzDYgP2st_OTw/exec";
 
-    function loadData() {
-      document.getElementById("debug").textContent = "Loading...";
-      fetch(API_URL)
-        .then(response => response.json())
-        .then(data => {
-          if (!data.success) {
-            document.getElementById("debug").innerHTML =
-              "<pre class='error'>" + JSON.stringify(data, null, 2) + "</pre>";
-            return;
-          }
+    async function loadData() {
+      document.getElementById('debug').innerText = "Loading...";
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const data = await response.json();
 
-          // ✅ Show debug
-          document.getElementById("debug").innerHTML =
-            "<pre class='success'>" + JSON.stringify(data, null, 2) + "</pre>";
+        document.getElementById('debug').innerText = JSON.stringify(data, null, 2);
 
-          // ✅ Populate store dropdown
-          if (data.sampleData && data.sampleData.StoreLocations) {
-            const storeSelect = document.getElementById("storeSelect");
-            storeSelect.innerHTML = "<option>-- Select a store --</option>";
-            data.sampleData.StoreLocations.forEach(row => {
-              if (row[0] && row[0] !== "Store ID") {
-                storeSelect.innerHTML += `<option value="${row[0]}">${row[1]}</option>`;
-              }
-            });
-          }
-        })
-        .catch(err => {
-          document.getElementById("debug").innerHTML =
-            "<pre class='error'>Fetch error: " + err + "</pre>";
-        });
+        // Populate stores if available
+        const storeSelect = document.getElementById("storeSelect");
+        storeSelect.innerHTML = '<option value="">-- Select a store --</option>';
+        if (data.stores) {
+          data.stores.forEach(store => {
+            const opt = document.createElement("option");
+            opt.value = store;
+            opt.textContent = store;
+            storeSelect.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        document.getElementById('debug').innerText = "Fetch error: " + err;
+      }
     }
 
-    // Auto-load on start
     loadData();
   </script>
 </body>
