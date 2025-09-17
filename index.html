@@ -103,6 +103,10 @@
                         <div class="loader mx-auto"></div>
                         <p class="mt-2 text-slate-500">Calculating product stats...</p>
                     </div>
+                    
+                    <div id="dashboard-summary" class="flex flex-wrap gap-4 mb-6">
+                        </div>
+
                     <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         </div>
                 </div>
@@ -234,8 +238,7 @@
             // ===================================================
             function initializeDashboardView(rangingData, dealsMap) {
                 const productStats = {};
-                const totalStores = [...new Set(rangingData.map(item => item.store))].filter(Boolean).length;
-
+                
                 rangingData.forEach(item => {
                     if (!item.product) return;
                     if (!productStats[item.product]) {
@@ -248,7 +251,42 @@
                     }
                 });
 
+                // Calculate summary stats
+                let productsWithGaps = 0;
+                let fullyRanged = 0;
+                const totalProducts = Object.keys(productStats).length;
+
+                for (const productName in productStats) {
+                    if (productStats[productName].notRanging > 0) {
+                        productsWithGaps++;
+                    } else {
+                        fullyRanged++;
+                    }
+                }
+
+                displayDashboardSummary({ totalProducts, productsWithGaps, fullyRanged });
                 displayDashboard(productStats, dealsMap);
+            }
+
+            function displayDashboardSummary(summary) {
+                const container = document.getElementById('dashboard-summary');
+                container.innerHTML = `
+                    <div class="flex-1 bg-white p-4 rounded-lg shadow min-w-[250px]">
+                        <h3 class="text-sm font-medium text-slate-500">Products with Ranging Gaps</h3>
+                        <p class="text-3xl font-bold text-red-500 mt-1">${summary.productsWithGaps}</p>
+                        <p class="text-xs text-slate-400">Products not ranged in at least one store.</p>
+                    </div>
+                    <div class="flex-1 bg-white p-4 rounded-lg shadow min-w-[250px]">
+                        <h3 class="text-sm font-medium text-slate-500">Fully Ranged Products</h3>
+                        <p class="text-3xl font-bold text-green-500 mt-1">${summary.fullyRanged}</p>
+                        <p class="text-xs text-slate-400">Products ranged in all applicable stores.</p>
+                    </div>
+                    <div class="flex-1 bg-white p-4 rounded-lg shadow min-w-[250px]">
+                        <h3 class="text-sm font-medium text-slate-500">Total Unique Products</h3>
+                        <p class="text-3xl font-bold text-slate-800 mt-1">${summary.totalProducts}</p>
+                        <p class="text-xs text-slate-400">Total products in the dataset.</p>
+                    </div>
+                `;
             }
 
             function displayDashboard(productStats, dealsMap) {
