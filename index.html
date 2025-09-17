@@ -4,38 +4,21 @@
   <meta charset="UTF-8">
   <title>📱 Store Ranging App</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f7f7f7;
-    }
-    h1 {
-      color: #0066cc;
-    }
-    #debug {
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 10px;
-      margin-top: 10px;
-      white-space: pre-wrap;
-      font-size: 12px;
-    }
-    select, button {
-      padding: 8px;
-      margin: 5px 0;
-      font-size: 14px;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .header { font-size: 22px; font-weight: bold; color: #0073e6; }
+    .version { font-size: 12px; color: gray; }
+    select, button { padding: 6px; margin: 5px 0; }
+    #debug { font-size: 12px; background: #f9f9f9; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; }
+    .error { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h1>📱 Store Ranging App <span style="font-size:14px; color:gray;">v2.4.1 (17 Sept 2025)</span></h1>
+  <div class="header">📱 Store Ranging App <span class="version">v2.4.2 (17 Sept 2025)</span></div>
   
-  <button onclick="loadData()">🔄 Refresh</button>
-  <select id="storeSelect">
-    <option value="">-- Select a store --</option>
-  </select>
+  <button id="refresh">🔄 Refresh</button>
+  <select id="storeDropdown"><option>-- Select a store --</option></select>
 
-  <h2>Products</h2>
+  <h3>Products</h3>
   <div id="products"></div>
 
   <h3>🛠 Debug Output</h3>
@@ -43,63 +26,47 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbziovfnY9nAhZ6-hy6NVa3QTxdM3IpSDjEH7is2Dvfjw7Mne4p2_F-nlItY2dDu3Lt5/exec";
-    let allData = {};
 
     async function loadData() {
-      document.getElementById("debug").textContent = "⏳ Loading...";
+      const debug = document.getElementById("debug");
+      debug.textContent = "Loading data...";
       try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        allData = data;
+        const response = await fetch(API_URL);
+        const json = await response.json();
+        console.log("Fetched JSON:", json);
+        debug.textContent = JSON.stringify(json, null, 2);
 
-        if (!data.success) throw new Error(data.error || "Unknown error");
+        // ✅ Get the "Data" sheet rows
+        if (!json.Data || json.Data.length < 2) {
+          throw new Error("No Data sheet found or it has no rows.");
+        }
 
-        // --- Populate store dropdown from Data tab col B ---
-        const storeSelect = document.getElementById("storeSelect");
-        storeSelect.innerHTML = '<option value="">-- Select a store --</option>';
-        const storeNames = [...new Set(data.data.map(row => row[1]))] // col B
-                          .filter(s => s && s.trim() !== "");
+        const rows = json.Data;  // 2D array of rows
+        const header = rows[0];  // First row = column names
+        const storeIndex = header.indexOf("Store"); // Find column B ("Store")
 
-        storeNames.forEach(store => {
-          const opt = document.createElement("option");
-          opt.value = store;
-          opt.textContent = store;
-          storeSelect.appendChild(opt);
+        if (storeIndex === -1) {
+          throw new Error("Could not find 'Store' column in Data sheet.");
+        }
+
+        // Populate dropdown with stores (skip header row)
+        const dropdown = document.getElementById("storeDropdown");
+        dropdown.innerHTML = "<option>-- Select a store --</option>";
+        rows.slice(1).forEach(r => {
+          if (r[storeIndex]) {
+            let option = document.createElement("option");
+            option.value = r[storeIndex];
+            option.textContent = r[storeIndex];
+            dropdown.appendChild(option);
+          }
         });
-
-        document.getElementById("debug").textContent = 
-          `✅ Loaded ${storeNames.length} stores & ${data.data.length} rows from Data tab.`;
-
       } catch (err) {
-        document.getElementById("debug").textContent = "❌ Fetch error: " + err.message;
+        debug.innerHTML = `<span class="error">Fetch error:</span> ${err.message}`;
       }
     }
 
-    // Show products when a store is selected
-    document.getElementById("storeSelect").addEventListener("change", function () {
-      const selectedStore = this.value;
-      const output = document.getElementById("products");
-
-      if (!selectedStore) {
-        output.innerHTML = "<em>No store selected</em>";
-        return;
-      }
-
-      // Filter rows from Data tab (col B = store)
-      const filtered = allData.data.filter(row => row[1] === selectedStore);
-
-      if (filtered.length === 0) {
-        output.innerHTML = "<em>No products found for this store</em>";
-      } else {
-        output.innerHTML = filtered.map(row => 
-          `<div><strong>${row[2] || "(no product)"}</strong> — ${row[3] || ""}</div>`
-        ).join("");
-      }
-    });
-
-    // Load immediately
-    loadData();
+    document.getElementById("refresh").addEventListener("click", loadData);
+    window.onload = loadData;
   </script>
 </body>
 </html>
