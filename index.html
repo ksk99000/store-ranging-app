@@ -299,16 +299,15 @@
                 const row = button.closest('tr');
                 const productName = button.dataset.productName;
 
-                // Remove from selected deals if it's there
+                // Remove from selected deals if it was added before
                 const existingDealIndex = selectedDeals.findIndex(d => d.productName === productName);
                 if (existingDealIndex > -1) {
                     selectedDeals.splice(existingDealIndex, 1);
                     updateTotalDealOffer();
                 }
 
-                // Visually mark the row as "not buying" and disable buttons
-                row.classList.add('opacity-50', 'bg-slate-100');
-                row.querySelectorAll('button').forEach(btn => btn.disabled = true);
+                // Remove the entire row from the table
+                row.remove();
             }
 
             function updateTotalDealOffer() {
