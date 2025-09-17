@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Store Ranging App v2.1.0</title>
+  <title>Store Ranging App v2.2.0</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
@@ -16,7 +16,7 @@
   <div class="h-screen flex flex-col">
     <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
       <h1 class="text-xl font-bold">📱 Store Ranging App</h1>
-      <span class="text-sm opacity-80">v2.1.0 (17 Sept 2025)</span>
+      <span class="text-sm opacity-80">v2.2.0 (17 Sept 2025)</span>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
@@ -36,6 +36,9 @@
 
       <!-- Product Results -->
       <div id="results-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <!-- Debug Box -->
+      <div id="debug" class="mt-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs whitespace-pre-wrap"></div>
     </main>
 
     <!-- Tooltip Modal -->
@@ -55,6 +58,7 @@ const webAppUrl = "https://script.google.com/macros/s/AKfycbx22kAm7uHFPV2i9B63H_
 
 let allDeals = [];
 let allRanging = [];
+let allStores = [];
 let currentStore = null;
 let selectedDeals = new Map();
 
@@ -62,8 +66,12 @@ async function loadData() {
   try {
     const res = await fetch(webAppUrl);
     const data = await res.json();
-    allDeals = data.deals || [];
-    allRanging = data.ranging || [];
+    document.getElementById("debug").innerText = JSON.stringify(data, null, 2);
+
+    allDeals = data.sampleData?.Deals || [];
+    allRanging = data.sampleData?.Ranging || [];
+    allStores = data.sampleData?.Data || [];
+
     populateStores();
   } catch (err) {
     alert("Failed to load data: " + err.message);
@@ -73,13 +81,18 @@ async function loadData() {
 function populateStores() {
   const storeSelect = document.getElementById("storeSelect");
   storeSelect.innerHTML = '<option value="">-- Select a store --</option>';
-  const stores = [...new Set(allRanging.map(r => r.store))];
-  stores.forEach(store => {
-    const opt = document.createElement("option");
-    opt.value = store;
-    opt.textContent = store;
-    storeSelect.appendChild(opt);
-  });
+
+  if (allStores.length > 1) {
+    // skip header row
+    for (let i = 1; i < allStores.length; i++) {
+      const storeName = allStores[i][1]; // column B = store name
+      const opt = document.createElement("option");
+      opt.value = storeName;
+      opt.textContent = storeName;
+      storeSelect.appendChild(opt);
+    }
+  }
+
   storeSelect.addEventListener("change", () => {
     currentStore = storeSelect.value;
     renderProducts();
@@ -91,26 +104,35 @@ function renderProducts() {
   container.innerHTML = "";
   if (!currentStore) return;
 
-  const notRanging = allRanging.filter(r => r.store === currentStore && r.status === "Not Ranging");
+  // filter not ranging products for this store
+  const headers = allRanging[0];
+  const storeIndex = headers.indexOf("Store");
+  const productIndex = headers.indexOf("Product");
+  const statusIndex = headers.indexOf("Status");
+
+  const notRanging = allRanging.filter((row, i) =>
+    i > 0 && row[storeIndex] === currentStore && row[statusIndex] === "Not Ranging"
+  );
 
   notRanging.forEach(r => {
-    const deal = allDeals.find(d => d.product === r.product);
+    const productName = r[productIndex];
+    const deal = allDeals.find(d => d.product === productName);
+
     const div = document.createElement("div");
     div.className = "product bg-white border rounded-lg shadow p-4 flex flex-col";
-
     div.innerHTML = `
       <img src="${deal?.image || ""}" class="h-24 object-contain mb-2 rounded">
-      <h3 class="font-bold text-gray-900">${deal?.product || r.product}</h3>
+      <h3 class="font-bold text-gray-900">${deal?.product || productName}</h3>
       <p class="text-sm text-gray-600">Metcash Code: ${deal?.code || "N/A"}</p>
       <p class="text-sm text-gray-600">50% Deal: ${deal?.deal || "N/A"}</p>
       <button class="deal-button mt-2 px-3 py-1 bg-green-600 text-white rounded" 
-        onclick="toggleDeal('${deal?.product || r.product}', ${deal?.deal || 0})">
+        onclick="toggleDeal('${deal?.product || productName}', ${deal?.deal || 0})">
         Add to Offer
       </button>
     `;
     div.addEventListener("click", e => {
       if (!e.target.classList.contains("deal-button")) {
-        showTooltip(deal || r);
+        showTooltip(deal || { product: productName });
       }
     });
     container.appendChild(div);
@@ -118,7 +140,8 @@ function renderProducts() {
 }
 
 function toggleDeal(product, price) {
-  const btns = [...document.querySelectorAll(".deal-button")].filter(b => b.parentElement.querySelector("h3").innerText === product);
+  const btns = [...document.querySelectorAll(".deal-button")]
+    .filter(b => b.parentElement.querySelector("h3").innerText === product);
   if (selectedDeals.has(product)) {
     selectedDeals.delete(product);
     btns.forEach(b => { b.classList.remove("selected"); b.innerText = "Add to Offer"; });
