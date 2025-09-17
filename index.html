@@ -4,15 +4,32 @@
   <meta charset="UTF-8">
   <title>📱 Store Ranging App</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f9fc; }
-    h1 { color: #007bff; }
-    #version { font-size: 0.9em; color: gray; }
-    select, button { margin: 10px 0; padding: 8px; }
-    #debug { margin-top: 20px; padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 5px; font-family: monospace; white-space: pre-wrap; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f7f7f7;
+    }
+    h1 {
+      color: #0066cc;
+    }
+    #debug {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 10px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+    select, button {
+      padding: 8px;
+      margin: 5px 0;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
-  <h1>📱 Store Ranging App <span id="version">v2.3.0 (17 Sept 2025)</span></h1>
+  <h1>📱 Store Ranging App <span style="font-size:14px; color:gray;">v2.4.1 (17 Sept 2025)</span></h1>
+  
   <button onclick="loadData()">🔄 Refresh</button>
   <select id="storeSelect">
     <option value="">-- Select a store --</option>
@@ -21,37 +38,67 @@
   <h2>Products</h2>
   <div id="products"></div>
 
-  <h2>🛠 Debug Output</h2>
+  <h3>🛠 Debug Output</h3>
   <div id="debug"></div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwX05hFhJaGxwQl6X_ifm66MUb-PBBAfvvsQzSnUFQiS3lG-0dSdqN3ddzDYgP2st_OTw/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbziovfnY9nAhZ6-hy6NVa3QTxdM3IpSDjEH7is2Dvfjw7Mne4p2_F-nlItY2dDu3Lt5/exec";
+    let allData = {};
 
     async function loadData() {
-      document.getElementById('debug').innerText = "Loading...";
+      document.getElementById("debug").textContent = "⏳ Loading...";
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const data = await response.json();
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        allData = data;
 
-        document.getElementById('debug').innerText = JSON.stringify(data, null, 2);
+        if (!data.success) throw new Error(data.error || "Unknown error");
 
-        // Populate stores if available
+        // --- Populate store dropdown from Data tab col B ---
         const storeSelect = document.getElementById("storeSelect");
         storeSelect.innerHTML = '<option value="">-- Select a store --</option>';
-        if (data.stores) {
-          data.stores.forEach(store => {
-            const opt = document.createElement("option");
-            opt.value = store;
-            opt.textContent = store;
-            storeSelect.appendChild(opt);
-          });
-        }
+        const storeNames = [...new Set(data.data.map(row => row[1]))] // col B
+                          .filter(s => s && s.trim() !== "");
+
+        storeNames.forEach(store => {
+          const opt = document.createElement("option");
+          opt.value = store;
+          opt.textContent = store;
+          storeSelect.appendChild(opt);
+        });
+
+        document.getElementById("debug").textContent = 
+          `✅ Loaded ${storeNames.length} stores & ${data.data.length} rows from Data tab.`;
+
       } catch (err) {
-        document.getElementById('debug').innerText = "Fetch error: " + err;
+        document.getElementById("debug").textContent = "❌ Fetch error: " + err.message;
       }
     }
 
+    // Show products when a store is selected
+    document.getElementById("storeSelect").addEventListener("change", function () {
+      const selectedStore = this.value;
+      const output = document.getElementById("products");
+
+      if (!selectedStore) {
+        output.innerHTML = "<em>No store selected</em>";
+        return;
+      }
+
+      // Filter rows from Data tab (col B = store)
+      const filtered = allData.data.filter(row => row[1] === selectedStore);
+
+      if (filtered.length === 0) {
+        output.innerHTML = "<em>No products found for this store</em>";
+      } else {
+        output.innerHTML = filtered.map(row => 
+          `<div><strong>${row[2] || "(no product)"}</strong> — ${row[3] || ""}</div>`
+        ).join("");
+      }
+    });
+
+    // Load immediately
     loadData();
   </script>
 </body>
