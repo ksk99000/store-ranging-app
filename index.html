@@ -1,72 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>📱 Store Ranging App</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    .header { font-size: 22px; font-weight: bold; color: #0073e6; }
-    .version { font-size: 12px; color: gray; }
-    select, button { padding: 6px; margin: 5px 0; }
-    #debug { font-size: 12px; background: #f9f9f9; border: 1px solid #ddd; padding: 10px; white-space: pre-wrap; }
-    .error { color: red; font-weight: bold; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Ranging & Deals App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        /* Active Store */
+        .active-store { background-color: #2563eb; color: white; }
+        /* Spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Deal button */
+        .deal-button.selected { background-color: #16a34a; color: white; font-weight: bold; }
+        /* Tooltip */
+        #product-info-tooltip { z-index: 50; }
+        #store-list-dropdown { z-index: 40; }
+    </style>
 </head>
-<body>
-  <div class="header">📱 Store Ranging App <span class="version">v2.4.3 (17 Sept 2025)</span></div>
-  
-  <button id="refresh">🔄 Refresh</button>
-  <select id="storeDropdown"><option>-- Select a store --</option></select>
+<body class="bg-slate-100 text-slate-800">
 
-  <h3>Products</h3>
-  <div id="products"></div>
+<div class="h-screen flex flex-col">
+    <!-- Main Content -->
+    <main class="w-full flex-grow flex flex-col bg-slate-50">
+        <header class="p-4 border-b border-slate-200 bg-white relative">
+            <!-- Store Selector -->
+            <div id="store-selector-button" class="inline-block cursor-pointer p-2 -m-2 rounded-md hover:bg-slate-100">
+                <h2 id="results-header" class="text-xl font-bold text-slate-900">Select a Store</h2>
+                <p id="results-subheader" class="text-sm text-slate-500">Tap to choose a store from the list</p>
+            </div>
+            <!-- Store Dropdown -->
+            <div id="store-list-dropdown" class="hidden absolute top-full left-4 mt-1 w-80 max-h-96 overflow-y-auto bg-white rounded-lg shadow-xl border border-slate-200">
+                <div id="store-loader" class="text-center p-8">
+                    <div class="loader mx-auto"></div>
+                    <p class="mt-2 text-slate-500">Loading stores...</p>
+                </div>
+                <ul id="store-ul-list"></ul>
+            </div>
+        </header>
 
-  <h3>🛠 Debug Output</h3>
-  <div id="debug"></div>
+        <div class="flex-grow p-4 overflow-y-auto">
+            <!-- Deal Summary -->
+            <div id="deal-offer-box" class="mb-4 p-4 bg-blue-100 border border-blue-200 rounded-lg hidden">
+                <h3 class="font-bold text-lg text-blue-800">Total Deal Offer Summary</h3>
+                <p class="text-sm text-blue-600">Based on 50% Deal Price</p>
+                <p id="deal-total" class="text-3xl font-bold text-blue-900 mt-1">$0.00</p>
+                <ul id="deal-list" class="mt-2 text-sm list-disc list-inside text-slate-700 space-y-1"></ul>
+            </div>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbziovfnY9nAhZ6-hy6NVa3QTxdM3IpSDjEH7is2Dvfjw7Mne4p2_F-nlItY2dDu3Lt5/exec";
+            <!-- Products Table -->
+            <div id="results-table-container" class="w-full">
+                <table class="min-w-full bg-white rounded-lg shadow">
+                    <thead class="bg-slate-200">
+                        <tr>
+                            <th class="p-3 text-left text-sm font-semibold text-slate-600 w-20">Image</th>
+                            <th class="p-3 text-left text-sm font-semibold text-slate-600">Product</th>
+                            <th class="p-3 text-left text-sm font-semibold text-slate-600">Metcash Code</th>
+                            <th class="p-3 text-left text-sm font-semibold text-slate-600">50% Deal</th>
+                            <th class="p-3 text-center text-sm font-semibold text-slate-600">Add to Offer</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                        <tr id="results-placeholder">
+                            <td colspan="5" class="p-8 text-center text-slate-500">
+                                Loading data from your Google Sheet...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
 
-    async function loadData() {
-      const debug = document.getElementById("debug");
-      debug.textContent = "Loading data...";
-      try {
-        const response = await fetch(API_URL);
-        const json = await response.json();
-        console.log("Fetched JSON:", json);
-        debug.textContent = JSON.stringify(json, null, 2);
+<!-- Tooltip -->
+<div id="product-info-tooltip" class="hidden fixed p-4 bg-white rounded-lg shadow-2xl border border-slate-300 max-w-xs w-full">
+    <div class="flex justify-between items-center pb-2 border-b border-slate-200 mb-2">
+        <h4 id="tooltip-product-name" class="font-bold text-base text-slate-800">Product Details</h4>
+        <button id="tooltip-close-btn" class="text-2xl font-bold text-slate-400 hover:text-slate-800 leading-none">&times;</button>
+    </div>
+    <div id="tooltip-content" class="space-y-2 text-sm"></div>
+</div>
 
-        // ✅ Handle both "Data" and "data"
-        const rows = json.Data || json.data;
-        if (!rows || rows.length < 2) {
-          throw new Error("No Data sheet found or it has no rows.");
-        }
+<script>
+const webAppUrl = 'https://script.google.com/macros/s/AKfycbxrP1ADOum-wxuaM4AwBzbGHKbG_3KJOLJNfeCcixt_3AjrXgfIJ7Ncp8uekeidG8I9_g/exec';
+let selectedDeals = [];
 
-        const header = rows[0];  // First row = column names
-        const storeIndex = header.indexOf("Store"); // Find column B ("Store")
+document.addEventListener('DOMContentLoaded', () => {
+    const storeListDropdown = document.getElementById('store-list-dropdown');
+    const storeUlList = document.getElementById('store-ul-list');
+    const resultsHeader = document.getElementById('results-header');
+    const resultsSubheader = document.getElementById('results-subheader');
+    const resultsBody = document.getElementById('results-body');
+    const storeLoader = document.getElementById('store-loader');
+    const resultsPlaceholder = document.getElementById('results-placeholder');
+    const dealOfferBox = document.getElementById('deal-offer-box');
+    const storeSelectorButton = document.getElementById('store-selector-button');
+    const tooltip = document.getElementById('product-info-tooltip');
+    const tooltipCloseBtn = document.getElementById('tooltip-close-btn');
 
-        if (storeIndex === -1) {
-          throw new Error("Could not find 'Store' column in Data sheet.");
-        }
+    fetch(webAppUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error || !data.rangingData || !data.dealsData) {
+                storeLoader.innerHTML = `<p class="text-red-600 font-semibold text-center">Error loading data:<br>${data.error || 'Unknown error'}</p>`;
+                resultsPlaceholder.querySelector('td').textContent = 'Error loading data.';
+                return;
+            }
+            storeLoader.style.display = 'none';
+            resultsPlaceholder.querySelector('td').textContent = 'Please select a store from the list.';
 
-        // Populate dropdown
-        const dropdown = document.getElementById("storeDropdown");
-        dropdown.innerHTML = "<option>-- Select a store --</option>";
-        rows.slice(1).forEach(r => {
-          if (r[storeIndex]) {
-            let option = document.createElement("option");
-            option.value = r[storeIndex];
-            option.textContent = r[storeIndex];
-            dropdown.appendChild(option);
-          }
+            const rangingData = data.rangingData.map(row => ({ store: row[0], product: row[1], status: row[2] }));
+            const dealsMap = new Map();
+            data.dealsData.forEach(deal => { if (deal.product) dealsMap.set(deal.product, deal); });
+
+            initializeApp(rangingData, dealsMap);
+        })
+        .catch(error => {
+            console.error("Fetch failed:", error);
+            storeLoader.innerHTML = '<p class="text-red-600 font-semibold text-center">Could not connect to data source.<br>Please check your internet connection.</p>';
         });
-      } catch (err) {
-        debug.innerHTML = `<span class="error">Fetch error:</span> ${err.message}`;
-      }
+
+    function initializeApp(rangingData, dealsMap) {
+        const stores = [...new Set(rangingData.map(item => item.store))].filter(Boolean).sort();
+        storeSelectorButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (storeLoader.style.display === 'none') {
+                storeListDropdown.classList.toggle('hidden');
+            }
+        });
+        stores.forEach(store => {
+            const li = document.createElement('li');
+            li.textContent = store;
+            li.className = 'p-3 cursor-pointer hover:bg-slate-100 border-b border-slate-200 truncate';
+            li.addEventListener('click', () => {
+                document.querySelectorAll('#store-ul-list li').forEach(el => el.classList.remove('active-store'));
+                li.classList.add('active-store');
+                tooltip.classList.add('hidden');
+                storeListDropdown.classList.add('hidden');
+                resultsHeader.textContent = store;
+                resultsSubheader.textContent = "Tap name to change store";
+                displayStoreData(store, rangingData, dealsMap);
+            });
+            storeUlList.appendChild(li);
+        });
     }
 
-    document.getElementById("refresh").addEventListener("click", loadData);
-    window.onload = loadData;
-  </script>
+    function displayStoreData(storeName, rangingData, dealsMap) {
+        selectedDeals = [];
+        updateTotalDealOffer();
+        const notRangingProducts = rangingData.filter(item => item.store === storeName && item.status && item.status.toLowerCase() === 'not ranging');
+        resultsBody.innerHTML = '';
+        if (notRangingProducts.length === 0) {
+            resultsBody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">This store ranges all products.</td></tr>`;
+            dealOfferBox.classList.add('hidden');
+            return;
+        }
+        dealOfferBox.classList.remove('hidden');
+        notRangingProducts.forEach(item => {
+            const deal = dealsMap.get(item.product);
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-slate-200 cursor-pointer hover:bg-slate-50';
+            const metcashCode = deal ? deal.metcashcode : 'Info Not Found';
+            const fiftyPercentDeal = deal ? deal['50deal'] : 'N/A';
+            const imageUrl = deal ? deal.imageurl : '';
+            const placeholderUrl = `https://placehold.co/60x60/e2e8f0/64748b?text=No+Img`;
+            tr.innerHTML = `
+                <td class="p-2"><img src="${imageUrl || placeholderUrl}" alt="${item.product}" class="w-12 h-12 object-cover rounded-md" loading="lazy" onerror="this.onerror=null;this.src='${placeholderUrl}';"></td>
+                <td class="p-3 font-medium text-slate-800">${item.product}</td>
+                <td class="p-3 text-slate-600">${metcashCode}</td>
+                <td class="p-3 text-slate-600">${fiftyPercentDeal}</td>
+                <td class="p-3 text-center"><button class="deal-button px-4 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors" data-product-name="${item.product}" data-deal-price="${fiftyPercentDeal}">Yes</button></td>`;
+            resultsBody.appendChild(tr);
+            tr.addEventListener('click', (e) => { if (e.target.tagName.toLowerCase() !== 'button') showProductInfo(deal, item.product, e); });
+        });
+        resultsBody.querySelectorAll('.deal-button').forEach(button => { button.addEventListener('click', handleDealButtonClick); });
+    }
+
+    function handleDealButtonClick(e) {
+        const button = e.target;
+        const productName = button.dataset.productName;
+        const dealPrice = button.dataset.dealPrice;
+        const existingDealIndex = selectedDeals.findIndex(d => d.productName === productName);
+        if (existingDealIndex > -1) {
+            selectedDeals.splice(existingDealIndex, 1);
+            button.classList.remove('selected');
+            button.textContent = 'Yes';
+        } else {
+            if (dealPrice && dealPrice !== 'N/A') {
+                selectedDeals.push({ productName, dealPrice });
+                button.classList.add('selected');
+                button.textContent = 'Added';
+            }
+        }
+        updateTotalDealOffer();
+    }
+
+    function updateTotalDealOffer() {
+        const dealTotalEl = document.getElementById('deal-total');
+        const dealListEl = document.getElementById('deal-list');
+        if (selectedDeals.length === 0) {
+            dealTotalEl.textContent = '$0.00';
+            dealListEl.innerHTML = '<li>No deals selected yet.</li>';
+            return;
+        }
+        let total = 0;
+        dealListEl.innerHTML = '';
+        selectedDeals.forEach(deal => {
+            const price = parseFloat(deal.dealPrice.replace(/[^0-9.-]+/g, "")) || 0;
+            total += price;
+            const li = document.createElement('li');
+            li.textContent = `${deal.productName} (@ ${deal.dealPrice})`;
+            dealListEl.appendChild(li);
+        });
+        dealTotalEl.textContent = `$${total.toFixed(2)}`;
+    }
+
+    function showProductInfo(deal, productName, e) {
+        const tooltipProductName = document.getElementById('tooltip-product-name');
+        const tooltipContent = document.getElementById('tooltip-content');
+        tooltipProductName.textContent = productName;
+        if (!deal) {
+            tooltipContent.innerHTML = '<p class="text-slate-500">This product does not have a matching entry in the Deals sheet.</p>';
+        } else {
+            tooltipContent.innerHTML = `
+                <p><strong>Case Cost:</strong> ${deal.listprice || 'N/A'}</p>
+                <p><strong>SDA Ranking:</strong> ${deal.sdaranking || 'N/A'}</p>
+                <p><strong>Category:</strong> ${deal.category || 'N/A'}</p>
+                <p><strong>Metcash Grade:</strong> ${deal.metcashgrade || 'N/A'}</p>
+                <p><strong>Metcash Layout:</strong> ${deal.metcashlayout || 'N/A'}</p>
+                <p><strong>Base Range:</strong> ${deal.metcashbaserange || 'N/A'}</p>`;
+        }
+        let top = e.pageY + 10;
+        let left = e.pageX + 10;
+        if (left + tooltip.offsetWidth > window.innerWidth) left = e.pageX - tooltip.offsetWidth - 10;
+        if (top + tooltip.offsetHeight > window.innerHeight) top = e.pageY - tooltip.offsetHeight - 10;
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+        tooltip.classList.remove('hidden');
+    }
+
+    tooltipCloseBtn.addEventListener('click', () => { tooltip.classList.add('hidden'); });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#store-selector-button') && !storeListDropdown.classList.contains('hidden')) storeListDropdown.classList.add('hidden');
+        if (!e.target.closest('tbody tr') && !e.target.closest('#product-info-tooltip')) tooltip.classList.add('hidden');
+    });
+});
+</script>
 </body>
 </html>
